@@ -7,8 +7,18 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// ============ CORS CONFIGURATION FOR HOSTING ============
+// CORS configuration untuk hosting
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Tambahkan juga untuk menangani preflight requests
+app.options('*', cors());
+
+// ============ MIDDLEWARE ============
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));

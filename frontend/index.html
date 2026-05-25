@@ -111,34 +111,25 @@
         </div>
     </section>
 
-    <!-- QR Scanner Modal - VERSI SEDERHANA -->
+    <!-- QR Scanner Modal SEDERHANA -->
     <div id="qrModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 500px;">
             <span class="close">&times;</span>
             <h2 style="text-align: center; margin-bottom: 1rem;">
                 <i class="fas fa-qrcode"></i> Scan QR Code Meja
             </h2>
             
-            <!-- Video element untuk kamera -->
-            <div id="camera-container" style="position: relative; width: 100%; background: #000; border-radius: 10px; overflow: hidden;">
-                <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
-                <canvas id="canvas" style="display: none;"></canvas>
-                <div id="scan-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 2px solid #00ff00; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); pointer-events: none;"></div>
+            <div id="qr-reader" style="width: 100%; border-radius: 10px; overflow: hidden;"></div>
+            
+            <div id="qr-status" style="margin-top: 1rem; padding: 0.5rem; border-radius: 8px; text-align: center; background: #f0f0f0;">
+                <i class="fas fa-info-circle"></i> Arahkan kamera ke QR code meja
             </div>
             
-            <div id="scan-status" style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: #666;">
-                Menunggu scan...
-            </div>
-            
-            <div id="manual-input" style="margin-top: 1rem; text-align: center;">
-                <button id="manualTableBtn" class="btn btn-secondary" style="width: 100%;">
-                    <i class="fas fa-keyboard"></i> Masukkan Nomor Meja Manual
+            <div style="margin-top: 1rem;">
+                <button id="manualTableBtn" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-keyboard"></i> Pilih Meja Manual
                 </button>
             </div>
-            
-            <p class="qr-info" style="margin-top: 1rem; font-size: 0.8rem; text-align: center;">
-                <i class="fas fa-info-circle"></i> Arahkan kamera ke QR code yang tersedia di meja
-            </p>
         </div>
     </div>
 
@@ -150,24 +141,24 @@
                 <i class="fas fa-chair"></i> Pilih Nomor Meja
             </h2>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin: 1.5rem 0;">
-                <button class="table-number-btn" data-table="1" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 1</button>
-                <button class="table-number-btn" data-table="2" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 2</button>
-                <button class="table-number-btn" data-table="3" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 3</button>
-                <button class="table-number-btn" data-table="4" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 4</button>
-                <button class="table-number-btn" data-table="5" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 5</button>
-                <button class="table-number-btn" data-table="6" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 6</button>
-                <button class="table-number-btn" data-table="7" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 7</button>
-                <button class="table-number-btn" data-table="8" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 8</button>
-                <button class="table-number-btn" data-table="9" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 9</button>
-                <button class="table-number-btn" data-table="10" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 10</button>
+                <button class="manual-table-btn" data-table="1" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 1</button>
+                <button class="manual-table-btn" data-table="2" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 2</button>
+                <button class="manual-table-btn" data-table="3" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 3</button>
+                <button class="manual-table-btn" data-table="4" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 4</button>
+                <button class="manual-table-btn" data-table="5" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 5</button>
+                <button class="manual-table-btn" data-table="6" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 6</button>
+                <button class="manual-table-btn" data-table="7" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 7</button>
+                <button class="manual-table-btn" data-table="8" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 8</button>
+                <button class="manual-table-btn" data-table="9" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 9</button>
+                <button class="manual-table-btn" data-table="10" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">Meja 10</button>
             </div>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
 
-    <!-- Load QR Scanner Library dari CDN yang lebih stabil -->
-    <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.js"></script>
+    <!-- Load html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

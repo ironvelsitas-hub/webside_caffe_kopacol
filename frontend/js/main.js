@@ -1,10 +1,21 @@
-// API Configuration
-const API_URL = window.location.origin || 'http://localhost:3000';
+// API Configuration - Deteksi environment (local atau hosting)
+let API_URL;
+
+// Deteksi apakah sedang di localhost atau hosting
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Local development
+    API_URL = 'http://localhost:3000';
+} else {
+    // Production / Hosting (Vercel)
+    // Gunakan URL yang sama dengan frontend karena backend dan frontend satu server
+    API_URL = window.location.origin;
+}
+
+console.log('API_URL:', API_URL);
+console.log('Environment:', window.location.hostname);
 
 // Global variables
-let videoElement = null;
-let scanInterval = null;
-let isScanning = false;
+let html5QrCode = null;
 
 // Load cart count
 function updateCartCount() {
@@ -50,7 +61,6 @@ function showToast(message, isError = false) {
     toast.classList.add('show');
     setTimeout(() => {
         toast.classList.remove('show');
-        toast.style.background = '#1a1a2e';
     }, 3000);
 }
 
@@ -66,150 +76,104 @@ function checkTableFromURL() {
     return false;
 }
 
-// Start camera scanner
-async function startCamera() {
-    const video = document.getElementById('video');
-    const statusDiv = document.getElementById('scan-status');
+// Start QR Scanner
+async function startQrScanner() {
+    const qrReaderId = "qr-reader";
+    const qrStatus = document.getElementById('qr-status');
     
-    if (!video) return;
-    
-    try {
-        // Request camera access
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }
-        });
-        
-        video.srcObject = stream;
-        video.setAttribute('playsinline', true);
-        await video.play();
-        
-        statusDiv.innerHTML = '<span style="color: green;"><i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...</span>';
-        isScanning = true;
-        
-        // Start scanning
-        startQRScanning();
-        
-    } catch (err) {
-        console.error('Camera error:', err);
-        statusDiv.innerHTML = '<span style="color: red;"><i class="fas fa-exclamation-triangle"></i> Kamera tidak tersedia. Silakan masukkan nomor meja manual.</span>';
-        showToast('Tidak dapat mengakses kamera. Gunakan input manual.', true);
-    }
-}
-
-// Stop camera
-function stopCamera() {
-    if (scanInterval) {
-        clearInterval(scanInterval);
-        scanInterval = null;
-    }
-    
-    const video = document.getElementById('video');
-    if (video && video.srcObject) {
-        const tracks = video.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
-        video.srcObject = null;
-    }
-    isScanning = false;
-}
-
-// Start QR scanning using ZXing
-function startQRScanning() {
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    if (!video || !canvas) return;
-    
-    // Clear previous interval
-    if (scanInterval) clearInterval(scanInterval);
-    
-    scanInterval = setInterval(() => {
-        if (!isScanning || video.readyState !== 4) return;
-        
+    // Clear previous scanner
+    if (html5QrCode) {
         try {
-            // Set canvas size to match video
-            if (video.videoWidth > 0) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                
-                // Draw video frame to canvas
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                // Get image data
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                
-                // Use ZXing to decode QR code
-                if (typeof ZXing !== 'undefined') {
-                    const codeReader = new ZXing.BrowserQRCodeReader();
-                    const img = new Image();
-                    img.src = canvas.toDataURL();
-                    
-                    codeReader.decodeFromImage(img).then(result => {
-                        if (result && result.text) {
-                            onScanSuccess(result.text);
-                        }
-                    }).catch(err => {
-                        // No QR found, continue scanning
-                    });
-                }
-            }
-        } catch (err) {
-            console.debug('Scan error:', err);
-        }
-    }, 500);
-}
-
-// Alternative: Use simple method to check for QR code
-function captureAndCheckQR() {
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+            await html5QrCode.stop();
+        } catch(e) {}
+        html5QrCode = null;
+    }
     
-    if (!video || !canvas || video.readyState !== 4) return;
+    // Clear the element
+    const readerElement = document.getElementById(qrReaderId);
+    if (readerElement) {
+        readerElement.innerHTML = '';
+    }
+    
+    // Create new scanner
+    html5QrCode = new Html5Qrcode(qrReaderId);
+    
+    const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+    };
     
     try {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+                console.log("Scanned:", decodedText);
+                handleScanResult(decodedText);
+            },
+            (errorMessage) => {
+                console.debug("Scanning...");
+            }
+        );
         
-        // Check for QR code in the image (simplified)
-        // This is a placeholder - in practice, you'd use a proper QR library
-        const statusDiv = document.getElementById('scan-status');
-        if (statusDiv && Math.random() > 0.99) {
-            // Simulated QR detection for demo
-            // In real implementation, use actual QR detection
-        }
+        qrStatus.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
+        qrStatus.style.background = '#d1fae5';
+        qrStatus.style.color = '#059669';
+        
     } catch (err) {
-        console.debug('Capture error:', err);
+        console.error("Error starting scanner:", err);
+        qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat mengakses kamera. Silakan pilih meja manual.';
+        qrStatus.style.background = '#fee2e2';
+        qrStatus.style.color = '#dc2626';
+        showToast('Kamera tidak tersedia, gunakan pilihan manual', true);
     }
 }
 
-// Handle successful scan
-function onScanSuccess(decodedText) {
-    console.log("Scanned:", decodedText);
-    
+// Stop QR Scanner
+async function stopQrScanner() {
+    if (html5QrCode) {
+        try {
+            await html5QrCode.stop();
+        } catch(e) {}
+        html5QrCode = null;
+    }
+}
+
+// Handle scan result
+function handleScanResult(decodedText) {
     let tableNumber = null;
     
-    // Extract table number from QR content
+    // Extract table number from various formats
     if (decodedText.includes('table=')) {
         const match = decodedText.match(/table=(\d+)/);
         if (match) tableNumber = match[1];
-    } else if (/^\d+$/.test(decodedText)) {
-        tableNumber = decodedText;
-    } else if (decodedText.match(/\/(\d+)$/)) {
+    }
+    else if (/^\d+$/.test(decodedText.trim())) {
+        tableNumber = decodedText.trim();
+    }
+    else if (decodedText.match(/\/(\d+)$/)) {
         const match = decodedText.match(/\/(\d+)$/);
         if (match) tableNumber = match[1];
     }
+    else {
+        const match = decodedText.match(/(\d+)/);
+        if (match && match[1] >= 1 && match[1] <= 10) {
+            tableNumber = match[1];
+        }
+    }
     
     if (tableNumber && tableNumber >= 1 && tableNumber <= 10) {
-        stopCamera();
+        stopQrScanner();
         localStorage.setItem('tableNumber', tableNumber);
         showToast(`✅ Terhubung ke Meja ${tableNumber}!`);
         
         const modal = document.getElementById('qrModal');
         if (modal) modal.style.display = 'none';
         
-        window.location.href = `menu.html?table=${tableNumber}`;
+        setTimeout(() => {
+            window.location.href = `menu.html?table=${tableNumber}`;
+        }, 500);
     } else {
         showToast("QR Code tidak valid. Scan ulang QR code meja.", true);
     }
@@ -225,17 +189,16 @@ function initQRScanner() {
     const closeBtn = qrModal.querySelector('.close');
     if (closeBtn) {
         closeBtn.onclick = () => {
-            stopCamera();
+            stopQrScanner();
             qrModal.style.display = 'none';
         };
     }
     
     scanBtn.onclick = async () => {
         qrModal.style.display = 'block';
-        await startCamera();
+        await startQrScanner();
     };
     
-    // Manual table selection
     const manualBtn = document.getElementById('manualTableBtn');
     const manualModal = document.getElementById('manualTableModal');
     
@@ -243,7 +206,7 @@ function initQRScanner() {
         const closeManual = manualModal.querySelector('.close-manual');
         
         manualBtn.onclick = () => {
-            stopCamera();
+            stopQrScanner();
             qrModal.style.display = 'none';
             manualModal.style.display = 'block';
         };
@@ -254,8 +217,7 @@ function initQRScanner() {
             };
         }
         
-        // Table number buttons
-        document.querySelectorAll('.table-number-btn').forEach(btn => {
+        document.querySelectorAll('.manual-table-btn').forEach(btn => {
             btn.onclick = () => {
                 const tableNumber = btn.dataset.table;
                 localStorage.setItem('tableNumber', tableNumber);
@@ -267,45 +229,77 @@ function initQRScanner() {
     }
 }
 
-// Load menu products
+// Load menu products - PERBAIKAN UTAMA UNTUK HOSTING
 async function loadMenu(category = 'all') {
+    const menuGrid = document.getElementById('menuGrid');
+    
+    if (!menuGrid) return;
+    
+    // Tampilkan loading
+    menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Memuat menu...</div>';
+    
     try {
-        const response = await fetch(`${API_URL}/api/products`);
-        if (!response.ok) throw new Error('Network error');
+        // Gunakan endpoint yang benar
+        const apiUrl = `${API_URL}/api/products`;
+        console.log('Fetching products from:', apiUrl);
+        
+        const response = await fetch(apiUrl);
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const products = await response.json();
+        console.log('Products loaded:', products.length);
+        
+        if (!products || products.length === 0) {
+            menuGrid.innerHTML = `
+                <div class="text-center" style="padding: 2rem;">
+                    <i class="fas fa-info-circle"></i> Belum ada produk.<br>
+                    Silakan tambahkan produk melalui admin panel.
+                </div>
+            `;
+            return;
+        }
         
         let filteredProducts = products;
         if (category !== 'all') {
             filteredProducts = products.filter(p => p.category === category);
         }
         
-        const menuGrid = document.getElementById('menuGrid');
-        if (menuGrid) {
-            if (filteredProducts.length === 0) {
-                menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;">Tidak ada produk</div>';
-                return;
-            }
-            
-            menuGrid.innerHTML = filteredProducts.map(product => `
-                <div class="product-card animate-fadeIn">
-                    <img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
-                    <div class="product-info">
-                        <h3 class="product-title">${escapeHtml(product.name)}</h3>
-                        <p class="product-description">${escapeHtml(product.description || 'Nikmati kelezatan produk kami')}</p>
-                        <p class="product-price">Rp ${Number(product.price).toLocaleString()}</p>
-                        <button class="add-to-cart" onclick="addToCart(${product.id}, '${escapeHtml(product.name)}', ${product.price}, '${product.image}')">
-                            <i class="fas fa-shopping-cart"></i> Tambah ke Keranjang
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+        if (filteredProducts.length === 0) {
+            menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;">Tidak ada produk dalam kategori ini</div>';
+            return;
         }
+        
+        menuGrid.innerHTML = filteredProducts.map(product => `
+            <div class="product-card animate-fadeIn">
+                <img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                <div class="product-info">
+                    <h3 class="product-title">${escapeHtml(product.name)}</h3>
+                    <p class="product-description">${escapeHtml(product.description || 'Nikmati kelezatan produk kami')}</p>
+                    <p class="product-price">Rp ${Number(product.price).toLocaleString()}</p>
+                    <button class="add-to-cart" onclick="addToCart(${product.id}, '${escapeHtml(product.name)}', ${product.price}, '${product.image}')">
+                        <i class="fas fa-shopping-cart"></i> Tambah ke Keranjang
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
     } catch (error) {
         console.error('Error loading menu:', error);
-        const menuGrid = document.getElementById('menuGrid');
-        if (menuGrid) {
-            menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem; color: red;">Gagal memuat menu. Pastikan server backend berjalan.</div>';
-        }
+        menuGrid.innerHTML = `
+            <div class="text-center" style="padding: 2rem; color: red;">
+                <i class="fas fa-exclamation-triangle"></i> Gagal memuat menu.<br>
+                Error: ${error.message}<br><br>
+                <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    <i class="fas fa-sync"></i> Refresh Halaman
+                </button>
+                <br><br>
+                <small>Pastikan server backend berjalan di ${API_URL}</small>
+            </div>
+        `;
     }
 }
 
@@ -342,7 +336,7 @@ function displayTableInfo() {
     if (tableNumber && tableInfoDiv) {
         tableInfoDiv.innerHTML = `
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.8rem; border-radius: 10px; text-align: center; margin-bottom: 1rem;">
-                <i class="fas fa-chair"></i> Anda sedang berada di <strong>Meja ${tableNumber}</strong>
+                <i class="fas fa-chair"></i> Anda berada di <strong>Meja ${tableNumber}</strong>
                 <button onclick="clearTableNumber()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 0.3rem 0.8rem; border-radius: 20px; margin-left: 0.5rem; cursor: pointer;">
                     <i class="fas fa-times"></i> Ganti
                 </button>
@@ -381,7 +375,7 @@ window.onclick = (event) => {
     const manualModal = document.getElementById('manualTableModal');
     
     if (event.target === qrModal) {
-        stopCamera();
+        stopQrScanner();
         qrModal.style.display = 'none';
     }
     if (event.target === manualModal) {
@@ -391,6 +385,7 @@ window.onclick = (event) => {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing...');
     updateCartCount();
     checkTableFromURL();
     displayTableInfo();

@@ -35,6 +35,12 @@
     <section class="menu-page">
         <div class="container">
             <div id="tableInfo"></div>
+            
+            <!-- Status koneksi -->
+            <div id="connectionStatus" style="display: none; background: #fee2e2; color: #dc2626; padding: 0.5rem; border-radius: 8px; text-align: center; margin-bottom: 1rem; font-size: 0.85rem;">
+                <i class="fas fa-exclamation-triangle"></i> Tidak dapat terhubung ke server. Pastikan backend berjalan.
+            </div>
+            
             <div class="menu-header">
                 <h1>Our <span class="highlight">Menu</span></h1>
                 <div class="category-filters">
@@ -45,7 +51,9 @@
                 </div>
             </div>
             <div class="menu-grid" id="menuGrid">
-                <div class="text-center">Loading...</div>
+                <div class="text-center" style="padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin"></i> Memuat menu...
+                </div>
             </div>
         </div>
     </section>
