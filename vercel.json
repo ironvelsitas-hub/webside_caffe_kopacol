@@ -23,8 +23,5 @@
       "src": "/(.*)",
       "dest": "frontend/index.html"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }

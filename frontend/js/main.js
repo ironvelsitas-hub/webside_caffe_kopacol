@@ -1,13 +1,12 @@
-// API Configuration - Deteksi environment (local atau hosting)
+// API Configuration - Fix for Vercel
 let API_URL;
 
-// Deteksi apakah sedang di localhost atau hosting
+// Deteksi environment
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     // Local development
     API_URL = 'http://localhost:3000';
 } else {
-    // Production / Hosting (Vercel)
-    // Gunakan URL yang sama dengan frontend karena backend dan frontend satu server
+    // Production on Vercel - gunakan URL yang sama
     API_URL = window.location.origin;
 }
 
@@ -81,7 +80,15 @@ async function startQrScanner() {
     const qrReaderId = "qr-reader";
     const qrStatus = document.getElementById('qr-status');
     
-    // Clear previous scanner
+    if (typeof Html5Qrcode === 'undefined') {
+        if (qrStatus) {
+            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Library scanner tidak tersedia. Silakan pilih meja manual.';
+            qrStatus.style.background = '#fee2e2';
+            qrStatus.style.color = '#dc2626';
+        }
+        return;
+    }
+    
     if (html5QrCode) {
         try {
             await html5QrCode.stop();
@@ -89,13 +96,11 @@ async function startQrScanner() {
         html5QrCode = null;
     }
     
-    // Clear the element
     const readerElement = document.getElementById(qrReaderId);
     if (readerElement) {
         readerElement.innerHTML = '';
     }
     
-    // Create new scanner
     html5QrCode = new Html5Qrcode(qrReaderId);
     
     const config = {
@@ -117,15 +122,19 @@ async function startQrScanner() {
             }
         );
         
-        qrStatus.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
-        qrStatus.style.background = '#d1fae5';
-        qrStatus.style.color = '#059669';
+        if (qrStatus) {
+            qrStatus.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
+            qrStatus.style.background = '#d1fae5';
+            qrStatus.style.color = '#059669';
+        }
         
     } catch (err) {
         console.error("Error starting scanner:", err);
-        qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat mengakses kamera. Silakan pilih meja manual.';
-        qrStatus.style.background = '#fee2e2';
-        qrStatus.style.color = '#dc2626';
+        if (qrStatus) {
+            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat mengakses kamera. Silakan pilih meja manual.';
+            qrStatus.style.background = '#fee2e2';
+            qrStatus.style.color = '#dc2626';
+        }
         showToast('Kamera tidak tersedia, gunakan pilihan manual', true);
     }
 }
@@ -144,17 +153,12 @@ async function stopQrScanner() {
 function handleScanResult(decodedText) {
     let tableNumber = null;
     
-    // Extract table number from various formats
     if (decodedText.includes('table=')) {
         const match = decodedText.match(/table=(\d+)/);
         if (match) tableNumber = match[1];
     }
     else if (/^\d+$/.test(decodedText.trim())) {
         tableNumber = decodedText.trim();
-    }
-    else if (decodedText.match(/\/(\d+)$/)) {
-        const match = decodedText.match(/\/(\d+)$/);
-        if (match) tableNumber = match[1];
     }
     else {
         const match = decodedText.match(/(\d+)/);
@@ -229,21 +233,25 @@ function initQRScanner() {
     }
 }
 
-// Load menu products - PERBAIKAN UTAMA UNTUK HOSTING
+// Load menu products - FIXED for Vercel
 async function loadMenu(category = 'all') {
     const menuGrid = document.getElementById('menuGrid');
     
     if (!menuGrid) return;
     
-    // Tampilkan loading
     menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Memuat menu...</div>';
     
     try {
-        // Gunakan endpoint yang benar
         const apiUrl = `${API_URL}/api/products`;
-        console.log('Fetching products from:', apiUrl);
+        console.log('Fetching from:', apiUrl);
         
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
         console.log('Response status:', response.status);
         
         if (!response.ok) {
@@ -297,7 +305,7 @@ async function loadMenu(category = 'all') {
                     <i class="fas fa-sync"></i> Refresh Halaman
                 </button>
                 <br><br>
-                <small>Pastikan server backend berjalan di ${API_URL}</small>
+                <small>API URL: ${API_URL}</small>
             </div>
         `;
     }
