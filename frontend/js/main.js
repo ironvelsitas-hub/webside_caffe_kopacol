@@ -1,20 +1,17 @@
-// API Configuration - Fix for Vercel
+// API Configuration
 let API_URL;
 
-// Deteksi environment
 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // Local development
     API_URL = 'http://localhost:3000';
 } else {
-    // Production on Vercel - gunakan URL yang sama
     API_URL = window.location.origin;
 }
 
 console.log('API_URL:', API_URL);
-console.log('Environment:', window.location.hostname);
 
 // Global variables
 let html5QrCode = null;
+let isScanning = false;
 
 // Load cart count
 function updateCartCount() {
@@ -24,7 +21,7 @@ function updateCartCount() {
     cartCountElements.forEach(el => el.textContent = count);
 }
 
-// Add to cart function
+// Add to cart
 window.addToCart = function(productId, productName, productPrice, productImage) {
     let cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const existingItem = cart.find(item => item.id === productId);
@@ -43,10 +40,10 @@ window.addToCart = function(productId, productName, productPrice, productImage) 
     
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartCount();
-    showToast('Produk ditambahkan ke keranjang!');
+    showToast('✓ Produk ditambahkan ke keranjang!');
 };
 
-// Show toast notification
+// Show toast
 function showToast(message, isError = false) {
     let toast = document.getElementById('toast');
     if (!toast) {
@@ -63,7 +60,7 @@ function showToast(message, isError = false) {
     }, 3000);
 }
 
-// Check for table number in URL
+// Check table from URL
 function checkTableFromURL() {
     const urlParams = new URLSearchParams(window.location.search);
     const tableNumber = urlParams.get('table');
@@ -78,17 +75,19 @@ function checkTableFromURL() {
 // Start QR Scanner
 async function startQrScanner() {
     const qrReaderId = "qr-reader";
-    const qrStatus = document.getElementById('qr-status');
+    const statusDiv = document.getElementById('scannerStatus');
     
+    // Cek library
     if (typeof Html5Qrcode === 'undefined') {
-        if (qrStatus) {
-            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Library scanner tidak tersedia. Silakan pilih meja manual.';
-            qrStatus.style.background = '#fee2e2';
-            qrStatus.style.color = '#dc2626';
+        if (statusDiv) {
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Library tidak tersedia. Silakan pilih meja manual.';
+            statusDiv.className = 'scanner-status status-error';
         }
+        showToast('Scanner tidak tersedia, gunakan pilihan manual', true);
         return;
     }
     
+    // Bersihkan scanner lama
     if (html5QrCode) {
         try {
             await html5QrCode.stop();
@@ -96,9 +95,23 @@ async function startQrScanner() {
         html5QrCode = null;
     }
     
-    const readerElement = document.getElementById(qrReaderId);
-    if (readerElement) {
-        readerElement.innerHTML = '';
+    // Buat container untuk scanner
+    let readerContainer = document.getElementById(qrReaderId);
+    if (!readerContainer) {
+        readerContainer = document.createElement('div');
+        readerContainer.id = qrReaderId;
+        readerContainer.style.width = '100%';
+        const modalContent = document.querySelector('#qrModal .modal-content');
+        if (modalContent) {
+            const videoContainer = modalContent.querySelector('.scanner-container');
+            if (videoContainer) {
+                videoContainer.appendChild(readerContainer);
+            }
+        }
+    }
+    
+    if (readerContainer) {
+        readerContainer.innerHTML = '';
     }
     
     html5QrCode = new Html5Qrcode(qrReaderId);
@@ -118,32 +131,33 @@ async function startQrScanner() {
                 handleScanResult(decodedText);
             },
             (errorMessage) => {
-                console.debug("Scanning...");
+                // Silent error
             }
         );
         
-        if (qrStatus) {
-            qrStatus.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
-            qrStatus.style.background = '#d1fae5';
-            qrStatus.style.color = '#059669';
+        isScanning = true;
+        if (statusDiv) {
+            statusDiv.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
+            statusDiv.className = 'scanner-status status-scanning';
         }
+        showToast('Kamera dimulai, arahkan ke QR code meja');
         
     } catch (err) {
-        console.error("Error starting scanner:", err);
-        if (qrStatus) {
-            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat mengakses kamera. Silakan pilih meja manual.';
-            qrStatus.style.background = '#fee2e2';
-            qrStatus.style.color = '#dc2626';
+        console.error("Error:", err);
+        if (statusDiv) {
+            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat akses kamera. ' + err.message;
+            statusDiv.className = 'scanner-status status-error';
         }
-        showToast('Kamera tidak tersedia, gunakan pilihan manual', true);
+        showToast('Tidak dapat akses kamera, gunakan pilihan manual', true);
     }
 }
 
-// Stop QR Scanner
+// Stop scanner
 async function stopQrScanner() {
-    if (html5QrCode) {
+    if (html5QrCode && isScanning) {
         try {
             await html5QrCode.stop();
+            isScanning = false;
         } catch(e) {}
         html5QrCode = null;
     }
@@ -153,6 +167,7 @@ async function stopQrScanner() {
 function handleScanResult(decodedText) {
     let tableNumber = null;
     
+    // Extract nomor meja dari berbagai format
     if (decodedText.includes('table=')) {
         const match = decodedText.match(/table=(\d+)/);
         if (match) tableNumber = match[1];
@@ -168,6 +183,13 @@ function handleScanResult(decodedText) {
     }
     
     if (tableNumber && tableNumber >= 1 && tableNumber <= 10) {
+        // Update status
+        const statusDiv = document.getElementById('scannerStatus');
+        if (statusDiv) {
+            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Berhasil! Meja ${tableNumber} terdeteksi`;
+            statusDiv.className = 'scanner-status status-success';
+        }
+        
         stopQrScanner();
         localStorage.setItem('tableNumber', tableNumber);
         showToast(`✅ Terhubung ke Meja ${tableNumber}!`);
@@ -179,11 +201,11 @@ function handleScanResult(decodedText) {
             window.location.href = `menu.html?table=${tableNumber}`;
         }, 500);
     } else {
-        showToast("QR Code tidak valid. Scan ulang QR code meja.", true);
+        showToast("QR Code tidak valid. Scan ulang QR code meja yang benar.", true);
     }
 }
 
-// Initialize QR Scanner
+// Initialize QR Scanner UI
 function initQRScanner() {
     const qrModal = document.getElementById('qrModal');
     const scanBtn = document.getElementById('scanQRBtn');
@@ -203,6 +225,18 @@ function initQRScanner() {
         await startQrScanner();
     };
     
+    const stopScanBtn = document.getElementById('stopScanBtn');
+    if (stopScanBtn) {
+        stopScanBtn.onclick = () => {
+            stopQrScanner();
+            const statusDiv = document.getElementById('scannerStatus');
+            if (statusDiv) {
+                statusDiv.innerHTML = '<i class="fas fa-stop"></i> Scanner dihentikan';
+                statusDiv.className = 'scanner-status status-error';
+            }
+        };
+    }
+    
     const manualBtn = document.getElementById('manualTableBtn');
     const manualModal = document.getElementById('manualTableModal');
     
@@ -221,7 +255,7 @@ function initQRScanner() {
             };
         }
         
-        document.querySelectorAll('.manual-table-btn').forEach(btn => {
+        document.querySelectorAll('.table-btn').forEach(btn => {
             btn.onclick = () => {
                 const tableNumber = btn.dataset.table;
                 localStorage.setItem('tableNumber', tableNumber);
@@ -233,41 +267,24 @@ function initQRScanner() {
     }
 }
 
-// Load menu products - FIXED for Vercel
+// Load menu products
 async function loadMenu(category = 'all') {
     const menuGrid = document.getElementById('menuGrid');
-    
     if (!menuGrid) return;
     
     menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Memuat menu...</div>';
     
     try {
-        const apiUrl = `${API_URL}/api/products`;
-        console.log('Fetching from:', apiUrl);
-        
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('Response status:', response.status);
+        const response = await fetch(`${API_URL}/api/products`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const products = await response.json();
-        console.log('Products loaded:', products.length);
         
         if (!products || products.length === 0) {
-            menuGrid.innerHTML = `
-                <div class="text-center" style="padding: 2rem;">
-                    <i class="fas fa-info-circle"></i> Belum ada produk.<br>
-                    Silakan tambahkan produk melalui admin panel.
-                </div>
-            `;
+            menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;">Belum ada produk</div>';
             return;
         }
         
@@ -296,22 +313,19 @@ async function loadMenu(category = 'all') {
         `).join('');
         
     } catch (error) {
-        console.error('Error loading menu:', error);
+        console.error('Error:', error);
         menuGrid.innerHTML = `
             <div class="text-center" style="padding: 2rem; color: red;">
                 <i class="fas fa-exclamation-triangle"></i> Gagal memuat menu.<br>
                 Error: ${error.message}<br><br>
                 <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                    <i class="fas fa-sync"></i> Refresh Halaman
+                    <i class="fas fa-sync"></i> Refresh
                 </button>
-                <br><br>
-                <small>API URL: ${API_URL}</small>
             </div>
         `;
     }
 }
 
-// Escape HTML
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -322,7 +336,6 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-// Category filters
 function setupCategoryFilters() {
     const filters = document.querySelectorAll('.filter-btn');
     if (filters.length === 0) return;
@@ -336,7 +349,6 @@ function setupCategoryFilters() {
     });
 }
 
-// Display table number
 function displayTableInfo() {
     const tableNumber = localStorage.getItem('tableNumber');
     const tableInfoDiv = document.getElementById('tableInfo');
@@ -359,7 +371,7 @@ window.clearTableNumber = function() {
     setTimeout(() => window.location.reload(), 500);
 };
 
-// Navbar scroll effect
+// Event listeners
 window.addEventListener('scroll', () => {
     const navbar = document.querySelector('.navbar');
     if (navbar) {
@@ -367,7 +379,6 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Mobile menu toggle
 const menuToggle = document.querySelector('.menu-toggle');
 const navMenu = document.querySelector('.nav-menu');
 
@@ -377,7 +388,6 @@ if (menuToggle && navMenu) {
     });
 }
 
-// Close modal when clicking outside
 window.onclick = (event) => {
     const qrModal = document.getElementById('qrModal');
     const manualModal = document.getElementById('manualTableModal');
@@ -393,7 +403,6 @@ window.onclick = (event) => {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing...');
     updateCartCount();
     checkTableFromURL();
     displayTableInfo();
