@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code untuk Meja - Cafe IronColol</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 30px;
+        }
+
+        /* Grid untuk menampilkan semua QR */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        /* Card untuk setiap meja */
+        .qr-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .qr-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .qr-card h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .qr-card .table-number {
+            font-size: 48px;
+            font-weight: bold;
+            color: #764ba2;
+            margin: 10px 0;
+        }
+
+        .qr-code {
+            margin: 20px auto;
+            padding: 15px;
+            background: white;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .qr-code img {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+        }
+
+        .instruction {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .instruction i {
+            color: #667eea;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-download:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Tombol aksi */
+        .action-buttons {
+            text-align: center;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-print {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-print-all {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-preview {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Preview modal untuk cetak */
+        .print-preview {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .print-preview.active {
+            display: block;
+        }
+
+        .print-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .close-preview {
+            float: right;
+            font-size: 30px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        /* Style untuk cetak */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .action-buttons, h1, .subtitle, .btn-download, .no-print {
+                display: none;
+            }
+            .qr-grid {
+                display: block;
+            }
+            .qr-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin-bottom: 20px;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+
+        /* Template untuk cetak per meja */
+        .print-template {
+            display: none;
+        }
+
+        .table-label {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        footer {
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            margin-top: 30px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ QR Code untuk Meja Cafe IronColol</h1>
+        <div class="subtitle">
+            <i class="fas fa-info-circle"></i> Cetak dan tempelkan QR Code ini di setiap meja
+        </div>
+
+        <div class="action-buttons no-print">
+            <button class="btn-action btn-print" onclick="printAll()">
+                🖨️ Cetak Semua Meja
+            </button>
+            <button class="btn-action btn-print-all" onclick="downloadAll()">
+                📥 Download Semua QR
+            </button>
+            <button class="btn-action btn-preview" onclick="showPreview()">
+                👁️ Preview Cetak
+            </button>
+        </div>
+
+        <div class="qr-grid" id="qrGrid"></div>
+        <footer class="no-print">
+            <i class="fas fa-qrcode"></i> Scan QR Code untuk memesan dari meja Anda
+        </footer>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="printPreview" class="print-preview">
+        <div class="print-content">
+            <span class="close-preview" onclick="closePreview()">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 20px;">Preview Cetak QR Code</h2>
+            <div id="previewContent"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn-action btn-print" onclick="printPreview()">🖨️ Cetak</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Konfigurasi URL
+        const BASE_URL = window.location.origin || 'http://localhost:3000';
+        
+        // Generate semua QR Code
+        function generateAllQRCodes() {
+            const grid = document.getElementById('qrGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 1; i <= 10; i++) {
+                const tableUrl = `${BASE_URL}/menu.html?table=${i}`;
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(tableUrl)}`;
+                
+                const card = document.createElement('div');
+                card.className = 'qr-card';
+                card.id = `qr-card-${i}`;
+                card.innerHTML = `
+                    <h2>🍽️ Meja ${i}</h2>
+                    <div class="table-number">Nomor ${i}</div>
+                    <div class="qr-code">
+                        <img id="qr-img-${i}" src="${qrCodeUrl}" alt="QR Code Meja ${i}">
+                    </div>
+                    <div class="instruction">
+                        <i class="fas fa-mobile-alt"></i> Scan QR Code dengan HP Anda<br>
+                        <small>Akan otomatis membuka menu pesanan</small>
+                    </div>
+                    <button class="btn-download" onclick="downloadQR(${i})">
+                        📥 Download QR Code Meja ${i}
+                    </button>
+                    <div class="table-label">
+                        Tempelkan di meja nomor ${i}
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+        
+        // Download QR Code per meja
+        function downloadQR(tableNumber) {
+            const img = document.getElementById(`qr-img-${tableNumber}`);
+            if (img) {
+                const link = document.createElement('a');
+                link.download = `qrcode-meja-${tableNumber}.png`;
+                link.href = img.src;
+                link.click();
+            }
+        }
+        
+        // Download semua QR dalam bentuk ZIP (menggunakan jszip)
+        async function downloadAll() {
+            // Load JSZip library
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+            script.onload = async () => {
+                const zip = new JSZip();
+                const folder = zip.folder("qrcodes-meja");
+                
+                for (let i = 1; i <= 10; i++) {
+                    const img = document.getElementById(`qr-img-${i}`);
+                    if (img) {
+                        const response = await fetch(img.src);
+                        const blob = await response.blob();
+                        folder.file(`meja-${i}.png`, blob);
+                    }
+                }
+                
+                const content = await zip.generateAsync({ type: "blob" });
+                const link = document.createElement('a');
+                link.download = "qrcodes-cafe-ironcolol.zip";
+                link.href = URL.createObjectURL(content);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Print semua QR
+        function printAll() {
+            window.print();
+        }
+        
+        // Show print preview
+        function showPreview() {
+            const preview = document.getElementById('printPreview');
+            const previewContent = document.getElementById('previewContent');
+            
+            // Clone all QR cards for preview
+            previewContent.innerHTML = '<div class="qr-grid" id="previewGrid"></div>';
+            const previewGrid = document.getElementById('previewGrid');
+            
+            for (let i = 1; i <= 10; i++) {
+                const originalCard = document.getElementById(`qr-card-${i}`);
+                if (originalCard) {
+                    const clonedCard = originalCard.cloneNode(true);
+                    // Remove download button from preview
+                    const btn = clonedCard.querySelector('.btn-download');
+                    if (btn) btn.remove();
+                    previewGrid.appendChild(clonedCard);
+                }
+            }
+            
+            preview.classList.add('active');
+        }
+        
+        function closePreview() {
+            const preview = document.getElementById('printPreview');
+            preview.classList.remove('active');
+        }
+        
+        function printPreview() {
+            const previewContent = document.getElementById('previewContent').innerHTML;
+            const originalTitle = document.title;
+            document.title = "QR Code Meja Cafe IronColol";
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>QR Code Meja Cafe IronColol</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .qr-grid {
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                            gap: 20px;
+                        }
+                        .qr-card {
+                            border: 1px solid #ddd;
+                            border-radius: 10px;
+                            padding: 15px;
+                            text-align: center;
+                            break-inside: avoid;
+                            page-break-inside: avoid;
+                        }
+                        .qr-card h2 { color: #667eea; margin-bottom: 10px; }
+                        .table-number { font-size: 36px; font-weight: bold; margin: 10px 0; }
+                        .qr-code img { width: 180px; height: 180px; }
+                        .instruction { margin-top: 10px; font-size: 12px; color: #666; }
+                        @media print {
+                            .qr-card { break-inside: avoid; page-break-inside: avoid; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1 style="text-align: center; margin-bottom: 20px;">QR Code Meja Cafe IronColol</h1>
+                    <div class="qr-grid">
+                        ${previewContent}
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        
+        // Generate QR codes on load
+        generateAllQRCodes();
+    </script>
+</body>
+</html>

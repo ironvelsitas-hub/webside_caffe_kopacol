@@ -1,0 +1,133 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Espresso",
+      "category": "kopi",
+      "price": 25000,
+      "image": "https://via.placeholder.com/300x200?text=Espresso",
+      "description": "Kopi hitam pekat dengan crema"
+    },
+    {
+      "id": 2,
+      "name": "Cappuccino",
+      "category": "kopi",
+      "price": 32000,
+      "image": "https://via.placeholder.com/300x200?text=Cappuccino",
+      "description": "Espresso dengan busa susu"
+    },
+    {
+      "id": 3,
+      "name": "French Fries",
+      "category": "snack",
+      "price": 18000,
+      "image": "https://via.placeholder.com/300x200?text=French+Fries",
+      "description": "Kentang goreng renyah"
+    },
+    {
+      "id": 4,
+      "name": "Nasi Goreng",
+      "category": "makanan",
+      "price": 35000,
+      "image": "https://via.placeholder.com/300x200?text=Nasi+Goreng",
+      "description": "Nasi goreng spesial dengan telur"
+    }
+  ],
+  "orders": [],
+  "tables": [
+    {
+      "id": 1,
+      "number": 1,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.321Z"
+    },
+    {
+      "id": 2,
+      "number": 2,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 3,
+      "number": 3,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 4,
+      "number": 4,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 5,
+      "number": 5,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 6,
+      "number": 6,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 7,
+      "number": 7,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 8,
+      "number": 8,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 9,
+      "number": 9,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    },
+    {
+      "id": 10,
+      "number": 10,
+      "status": "available",
+      "qrCode": null,
+      "qrCodeUrl": null,
+      "isActive": true,
+      "createdAt": "2026-05-25T09:43:16.322Z"
+    }
+  ],
+  "admin": {
+    "username": "admin",
+    "password": "admin123"
+  }
+}

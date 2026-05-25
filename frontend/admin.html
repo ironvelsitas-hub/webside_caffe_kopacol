@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Admin Dashboard - Cafe IronColol</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Additional admin styles */
+        .admin-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .admin-sidebar {
+            width: 260px;
+            background: #1a1a2e;
+            color: white;
+            padding: 1.5rem;
+        }
+        .admin-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .admin-logo i {
+            font-size: 1.8rem;
+            color: #667eea;
+        }
+        .admin-logo h2 {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+        .admin-user {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .admin-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .admin-nav-btn {
+            padding: 0.8rem 1rem;
+            background: none;
+            border: none;
+            color: white;
+            text-align: left;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.95rem;
+        }
+        .admin-nav-btn i {
+            width: 1.5rem;
+        }
+        .admin-nav-btn:hover,
+        .admin-nav-btn.active {
+            background: #667eea;
+        }
+        .admin-main {
+            flex: 1;
+            padding: 1.5rem;
+            background: #f5f7fa;
+            overflow-x: auto;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .admin-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .products-table {
+            background: white;
+            border-radius: 15px;
+            overflow-x: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .products-table table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        .products-table th,
+        .products-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .products-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        .product-image-cell {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            margin: 0 0.2rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .edit-btn {
+            background: #667eea;
+            color: white;
+        }
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .close {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #333;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            z-index: 2000;
+            display: none;
+        }
+        .toast.show {
+            display: block;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .order-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+        }
+        .order-status {
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-processing { background: #dbeafe; color: #2563eb; }
+        .status-completed { background: #d1fae5; color: #059669; }
+        .status-cancelled { background: #fee2e2; color: #dc2626; }
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .table-card i {
+            font-size: 2rem;
+            color: #667eea;
+        }
+        .status-available { color: #10b981; }
+        .status-occupied { color: #ef4444; }
+        .qr-admin-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .qr-preview {
+            text-align: center;
+            padding: 1rem;
+        }
+        .qr-preview img {
+            width: 150px;
+            height: 150px;
+        }
+        @media (max-width: 768px) {
+            .admin-container {
+                flex-direction: column;
+            }
+            .admin-sidebar {
+                width: 100%;
+            }
+            .admin-nav {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal" style="display: flex;">
+        <div class="modal-content">
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-lock"></i> Admin Login
+            </h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required placeholder="admin" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required placeholder="admin123">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Admin Panel -->
+    <div id="adminPanel" style="display: none;">
+        <div class="admin-container">
+            <aside class="admin-sidebar">
+                <div class="admin-logo">
+                    <i class="fas fa-mug-hot"></i>
+                    <h2>IronColol Admin</h2>
+                </div>
+                <div class="admin-user">
+                    <span><i class="fas fa-user-circle"></i> <span id="adminUsername">Admin</span></span>
+                    <button id="logoutBtn" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+                <nav class="admin-nav">
+                    <button class="admin-nav-btn active" data-tab="products">
+                        <i class="fas fa-utensils"></i> Produk
+                    </button>
+                    <button class="admin-nav-btn" data-tab="orders">
+                        <i class="fas fa-shopping-cart"></i> Pesanan
+                    </button>
+                    <button class="admin-nav-btn" data-tab="tables">
+                        <i class="fas fa-chair"></i> Meja
+                    </button>
+                    <button class="admin-nav-btn" data-tab="qrcode">
+                        <i class="fas fa-qrcode"></i> QR Code Meja
+                    </button>
+                </nav>
+            </aside>
+
+            <main class="admin-main">
+                <!-- Products Tab -->
+                <div id="productsTab" class="admin-tab active">
+                    <div class="admin-header">
+                        <h2><i class="fas fa-utensils"></i> Katalog Produk</h2>
+                        <button class="btn-primary" id="addProductBtn">
+                            <i class="fas fa-plus"></i> Tambah Produk
+                        </button>
+                    </div>
+                    <div class="products-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Gambar</th>
+                                    <th>Nama</th>
+                                    <th>Kategori</th>
+                                    <th>Harga</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTableBody">
+                                <tr><td colspan="5" class="text-center">Loading...</td><tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Orders Tab -->
+                <div id="ordersTab" class="admin-tab">
+                    <div class="admin-header">
+                        <h2><i class="fas fa-shopping-cart"></i> Daftar Pesanan</h2>
+                    </div>
+                    <div id="ordersList" class="orders-list">
+                        <div class="text-center">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Tables Tab -->
+                <div id="tablesTab" class="admin-tab">
+                    <div class="admin-header">
+                        <h2><i class="fas fa-chair"></i> Status Meja</h2>
+                    </div>
+                    <div id="tablesGrid" class="tables-grid">
+                        <div class="text-center">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- QR Code Tab -->
+                <div id="qrcodeTab" class="admin-tab">
+                    <div class="admin-header">
+                        <h2><i class="fas fa-qrcode"></i> Manajemen QR Code</h2>
+                        <button class="btn-primary" id="generateAllQRBtn">
+                            <i class="fas fa-qrcode"></i> Generate Semua QR
+                        </button>
+                    </div>
+                    <div id="qrManagementGrid" class="qr-management-grid">
+                        <div class="text-center">Loading...</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Tambah Produk</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label>Nama Produk</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label>Kategori</label>
+                    <select id="productCategory" required>
+                        <option value="kopi">☕ Kopi</option>
+                        <option value="makanan">🍚 Makanan</option>
+                        <option value="snack">🍿 Snack</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Harga (Rp)</label>
+                    <input type="number" id="productPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>Deskripsi</label>
+                    <textarea id="productDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Gambar URL</label>
+                    <input type="text" id="productImage" placeholder="https://...">
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Simpan</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/admin.js"></script>
+</body>
+</html>

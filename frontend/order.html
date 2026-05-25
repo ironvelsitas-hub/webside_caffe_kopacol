@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesan Antar - Cafe IronColol</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-mug-hot"></i>
+                <span>IronColol</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Beranda</a></li>
+                <li><a href="menu.html" class="nav-link">Menu</a></li>
+                <li><a href="order.html" class="nav-link active">Pesan Antar</a></li>
+            </ul>
+            <div class="nav-icons">
+                <a href="cart.html" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="order-page">
+        <div class="container">
+            <div class="order-container">
+                <div class="order-info">
+                    <h1>Pesan Antar</h1>
+                    <p>Isi form di bawah untuk pemesanan antar</p>
+                    <form id="deliveryForm">
+                        <div class="form-group">
+                            <label>Nama Lengkap</label>
+                            <input type="text" id="customerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nomor Telepon</label>
+                            <input type="tel" id="customerPhone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Alamat Lengkap</label>
+                            <textarea id="customerAddress" rows="3" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Catatan (opsional)</label>
+                            <textarea id="orderNote" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Lanjutkan ke Keranjang</button>
+                    </form>
+                </div>
+                <div class="order-cart">
+                    <h3>Ringkasan Pesanan</h3>
+                    <div id="cartItems"></div>
+                    <div class="cart-total">
+                        <span>Total:</span>
+                        <span id="cartTotal">Rp 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/cart.js"></script>
+</body>
+</html>

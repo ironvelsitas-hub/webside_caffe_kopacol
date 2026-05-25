@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keranjang - Cafe IronColol</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-mug-hot"></i>
+                <span>IronColol</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Beranda</a></li>
+                <li><a href="menu.html" class="nav-link">Menu</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="cart-page">
+        <div class="container">
+            <h1>Keranjang Belanja</h1>
+            <div id="cartContent">
+                <div class="cart-empty">
+                    <i class="fas fa-shopping-cart"></i>
+                    <p>Keranjang masih kosong</p>
+                    <a href="menu.html" class="btn btn-primary">Mulai Belanja</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <h2>Pembayaran QRIS</h2>
+            <div class="qris-container">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=QRIS_IRONCOLOL" alt="QRIS Code">
+                <p>Scan QR code untuk pembayaran</p>
+            </div>
+            <button class="btn btn-primary" id="confirmPayment">Konfirmasi Pembayaran</button>
+        </div>
+    </div>
+
+    <script src="js/cart.js"></script>
+</body>
+</html>

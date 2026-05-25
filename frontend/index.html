@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Cafe IronColol - Premium Coffee & Dining</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-mug-hot"></i>
+                <span>IronColol</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link active">Beranda</a></li>
+                <li><a href="menu.html" class="nav-link">Menu</a></li>
+                <li><a href="order.html" class="nav-link">Pesan Antar</a></li>
+                <li><a href="#about" class="nav-link">Tentang</a></li>
+            </ul>
+            <div class="nav-icons">
+                <a href="cart.html" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count">0</span>
+                </a>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1 class="animate-slideDown">Welcome to <span class="highlight">IronColol</span></h1>
+            <p class="animate-slideUp">Experience the perfect blend of premium coffee and exquisite dining</p>
+            <div class="hero-buttons">
+                <a href="menu.html" class="btn btn-primary">Lihat Menu</a>
+                <button class="btn btn-secondary" id="scanQRBtn">
+                    <i class="fas fa-qrcode"></i> Scan QR Meja
+                </button>
+            </div>
+        </div>
+        <div class="hero-wave">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                <path fill="#ffffff" fill-opacity="1" d="M0,192L48,197.3C96,203,192,213,288,208C384,203,480,181,576,181.3C672,181,768,203,864,208C960,213,1056,203,1152,186.7C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-card animate-fadeIn">
+                    <i class="fas fa-coffee"></i>
+                    <h3>Premium Coffee</h3>
+                    <p>Dari biji kopi pilihan terbaik</p>
+                </div>
+                <div class="feature-card animate-fadeIn" style="animation-delay: 0.2s">
+                    <i class="fas fa-utensils"></i>
+                    <h3>Delicious Food</h3>
+                    <p>Menu makanan berkualitas</p>
+                </div>
+                <div class="feature-card animate-fadeIn" style="animation-delay: 0.4s">
+                    <i class="fas fa-motorcycle"></i>
+                    <h3>Free Delivery</h3>
+                    <p>Gratis ongkir area tertentu</p>
+                </div>
+                <div class="feature-card animate-fadeIn" style="animation-delay: 0.6s">
+                    <i class="fas fa-qrcode"></i>
+                    <h3>QR Order</h3>
+                    <p>Scan & pesan dari meja</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text animate-slideLeft">
+                    <h2>Tentang <span class="highlight">IronColol</span></h2>
+                    <p>IronColol adalah tempat di mana kopi premium bertemu dengan hidangan eksklusif. Kami menghadirkan pengalaman bersantap yang tak terlupakan dengan atmosfer modern dan pelayanan terbaik.</p>
+                    <div class="about-stats">
+                        <div class="stat">
+                            <h4>5+</h4>
+                            <p>Tahun Pengalaman</p>
+                        </div>
+                        <div class="stat">
+                            <h4>1000+</h4>
+                            <p>Pelanggan Puas</p>
+                        </div>
+                        <div class="stat">
+                            <h4>50+</h4>
+                            <p>Menu Variasi</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image animate-slideRight">
+                    <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?ixlib=rb-4.0.3" alt="Cafe Interior">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QR Scanner Modal - VERSI SEDERHANA -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 1rem;">
+                <i class="fas fa-qrcode"></i> Scan QR Code Meja
+            </h2>
+            
+            <!-- Video element untuk kamera -->
+            <div id="camera-container" style="position: relative; width: 100%; background: #000; border-radius: 10px; overflow: hidden;">
+                <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
+                <canvas id="canvas" style="display: none;"></canvas>
+                <div id="scan-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 2px solid #00ff00; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); pointer-events: none;"></div>
+            </div>
+            
+            <div id="scan-status" style="margin-top: 1rem; text-align: center; font-size: 0.9rem; color: #666;">
+                Menunggu scan...
+            </div>
+            
+            <div id="manual-input" style="margin-top: 1rem; text-align: center;">
+                <button id="manualTableBtn" class="btn btn-secondary" style="width: 100%;">
+                    <i class="fas fa-keyboard"></i> Masukkan Nomor Meja Manual
+                </button>
+            </div>
+            
+            <p class="qr-info" style="margin-top: 1rem; font-size: 0.8rem; text-align: center;">
+                <i class="fas fa-info-circle"></i> Arahkan kamera ke QR code yang tersedia di meja
+            </p>
+        </div>
+    </div>
+
+    <!-- Manual Table Modal -->
+    <div id="manualTableModal" class="modal">
+        <div class="modal-content" style="max-width: 350px;">
+            <span class="close-manual">&times;</span>
+            <h2 style="text-align: center;">
+                <i class="fas fa-chair"></i> Pilih Nomor Meja
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin: 1.5rem 0;">
+                <button class="table-number-btn" data-table="1" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 1</button>
+                <button class="table-number-btn" data-table="2" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 2</button>
+                <button class="table-number-btn" data-table="3" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 3</button>
+                <button class="table-number-btn" data-table="4" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 4</button>
+                <button class="table-number-btn" data-table="5" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 5</button>
+                <button class="table-number-btn" data-table="6" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 6</button>
+                <button class="table-number-btn" data-table="7" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 7</button>
+                <button class="table-number-btn" data-table="8" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 8</button>
+                <button class="table-number-btn" data-table="9" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 9</button>
+                <button class="table-number-btn" data-table="10" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">Meja 10</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- Load QR Scanner Library dari CDN yang lebih stabil -->
+    <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
