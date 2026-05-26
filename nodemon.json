@@ -1,0 +1,7 @@
+{
+  "ignore": [
+    "backend/database/*",
+    "backend/uploads/*",
+    "uploads/*"
+  ]
+}

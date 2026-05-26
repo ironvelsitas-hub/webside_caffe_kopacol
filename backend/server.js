@@ -113,13 +113,49 @@ let database = {
     }))
 };
 
-// Helper functions
+const DB_PATH = path.join(__dirname, 'database', 'db.json');
+
+// Initialize database from file or use the default one and save it
+if (fs.existsSync(DB_PATH)) {
+    try {
+        database = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+        console.log('Database loaded successfully from db.json');
+    } catch (error) {
+        console.error('Error loading database from db.json, using default:', error);
+    }
+} else {
+    try {
+        const dbDir = path.dirname(DB_PATH);
+        if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+        }
+        fs.writeFileSync(DB_PATH, JSON.stringify(database, null, 2), 'utf8');
+        console.log('Created initial db.json database file');
+    } catch (error) {
+        console.error('Error initializing db.json:', error);
+    }
+}
+
+// Helper functions with file persistence
 function readDB() {
+    try {
+        if (fs.existsSync(DB_PATH)) {
+            const data = fs.readFileSync(DB_PATH, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error reading database file:', error);
+    }
     return database;
 }
 
 function writeDB(data) {
-    database = data;
+    try {
+        database = data; // Keep memory in sync
+        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+        console.error('Error writing database file:', error);
+    }
 }
 
 // ============ ADMIN AUTH ============
