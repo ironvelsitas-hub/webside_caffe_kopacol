@@ -15,9 +15,9 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware - increase limit for base64 images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ============ MULTER CONFIGURATION FOR IMAGE UPLOAD ============
 // Hanya aktif jika bukan production (Vercel)
@@ -69,7 +69,8 @@ let database = {
             name: "Espresso",
             category: "kopi",
             price: 25000,
-            image: "https://via.placeholder.com/300x200?text=Espresso",
+            image: null, // akan diisi base64
+            imageUrl: "https://via.placeholder.com/300x200?text=Espresso",
             description: "Kopi hitam pekat dengan crema"
         },
         {
@@ -77,7 +78,8 @@ let database = {
             name: "Cappuccino",
             category: "kopi",
             price: 32000,
-            image: "https://via.placeholder.com/300x200?text=Cappuccino",
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=Cappuccino",
             description: "Espresso dengan busa susu"
         },
         {
@@ -85,7 +87,8 @@ let database = {
             name: "French Fries",
             category: "snack",
             price: 18000,
-            image: "https://via.placeholder.com/300x200?text=French+Fries",
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=French+Fries",
             description: "Kentang goreng renyah"
         },
         {
@@ -93,40 +96,9 @@ let database = {
             name: "Nasi Goreng",
             category: "makanan",
             price: 35000,
-            image: "https://via.placeholder.com/300x200?text=Nasi+Goreng",
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=Nasi+Goreng",
             description: "Nasi goreng spesial dengan telur"
-        },
-        {
-            id: 5,
-            name: "Latte",
-            category: "kopi",
-            price: 35000,
-            image: "https://via.placeholder.com/300x200?text=Latte",
-            description: "Espresso dengan susu steamed"
-        },
-        {
-            id: 6,
-            name: "Mocha",
-            category: "kopi",
-            price: 38000,
-            image: "https://via.placeholder.com/300x200?text=Mocha",
-            description: "Espresso dengan coklat dan susu"
-        },
-        {
-            id: 7,
-            name: "American Fried Chicken",
-            category: "makanan",
-            price: 28000,
-            image: "https://via.placeholder.com/300x200?text=American+Fried+Chicken",
-            description: "Ayam goreng crispy"
-        },
-        {
-            id: 8,
-            name: "Onion Rings",
-            category: "snack",
-            price: 15000,
-            image: "https://via.placeholder.com/300x200?text=Onion+Rings",
-            description: "Bawang bombay goreng crispy"
         }
     ],
     orders: [],
@@ -158,7 +130,6 @@ function adminAuth(req, res, next) {
         return res.status(401).json({ error: 'Unauthorized access - No token' });
     }
     
-    // Simple token validation
     if (token && token.includes('admin_token_')) {
         return next();
     }
@@ -187,19 +158,26 @@ app.post('/api/admin/login', (req, res) => {
 app.get('/api/products', (req, res) => {
     try {
         const db = readDB();
-        res.json(db.products);
+        // Kirimkan imageUrl untuk ditampilkan (bukan base64)
+        const products = db.products.map(p => ({
+            ...p,
+            image: p.imageUrl || 'https://via.placeholder.com/300x200?text=Product'
+        }));
+        res.json(products);
     } catch (error) {
         console.error('Error getting products:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-// Get single product by ID
 app.get('/api/products/:id', (req, res) => {
     const db = readDB();
     const product = db.products.find(p => p.id == req.params.id);
     if (product) {
-        res.json(product);
+        res.json({
+            ...product,
+            image: product.imageUrl || 'https://via.placeholder.com/300x200?text=Product'
+        });
     } else {
         res.status(404).json({ error: 'Product not found' });
     }
@@ -211,24 +189,45 @@ app.get('/api/products/category/:category', (req, res) => {
     res.json(products);
 });
 
-// POST product with image upload (if upload available)
+// POST product (tambah produk baru) - dengan base64 image
 app.post('/api/products', (req, res) => {
-    const db = readDB();
-    
-    // Handle file upload if available (local) or just use body (Vercel)
-    let imageUrl = req.body.image || 'https://via.placeholder.com/300x200?text=Product';
-    
-    const newProduct = {
-        id: Date.now(),
-        name: req.body.name,
-        category: req.body.category,
-        price: parseInt(req.body.price),
-        description: req.body.description || '',
-        image: imageUrl
-    };
-    db.products.push(newProduct);
-    writeDB(db);
-    res.json(newProduct);
+    try {
+        const db = readDB();
+        const { name, category, price, description, image } = req.body;
+        
+        // Validasi input
+        if (!name) {
+            return res.status(400).json({ error: 'Nama produk harus diisi!' });
+        }
+        
+        if (!price || price <= 0) {
+            return res.status(400).json({ error: 'Harga tidak valid!' });
+        }
+        
+        const newProduct = {
+            id: Date.now(),
+            name: name,
+            category: category || 'snack',
+            price: parseInt(price),
+            description: description || '',
+            image: image || null, // simpan base64 jika ada
+            imageUrl: image || 'https://via.placeholder.com/300x200?text=Product'
+        };
+        
+        db.products.push(newProduct);
+        writeDB(db);
+        console.log('Product added:', newProduct.name);
+        res.status(201).json({ 
+            success: true, 
+            product: {
+                ...newProduct,
+                image: newProduct.imageUrl
+            }
+        });
+    } catch (error) {
+        console.error('Error adding product:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // PUT (update) product
@@ -239,12 +238,13 @@ app.put('/api/products/:id', (req, res) => {
     
     if (index !== -1) {
         const updatedProduct = {
-            id: productId,
+            ...db.products[index],
             name: req.body.name || db.products[index].name,
             category: req.body.category || db.products[index].category,
             price: parseInt(req.body.price) || db.products[index].price,
             description: req.body.description || db.products[index].description,
-            image: req.body.image || db.products[index].image
+            image: req.body.image || db.products[index].image,
+            imageUrl: req.body.image || db.products[index].imageUrl
         };
         
         db.products[index] = updatedProduct;
@@ -302,14 +302,11 @@ app.put('/api/orders/:id', (req, res) => {
 });
 
 // ============ TABLE MANAGEMENT ROUTES ============
-
-// Get all tables (public)
 app.get('/api/tables', (req, res) => {
     const db = readDB();
     res.json(db.tables);
 });
 
-// Get single table (public)
 app.get('/api/tables/:id', (req, res) => {
     const db = readDB();
     const table = db.tables.find(t => t.id == req.params.id);
@@ -320,7 +317,6 @@ app.get('/api/tables/:id', (req, res) => {
     }
 });
 
-// Add new table (admin only)
 app.post('/api/admin/tables', adminAuth, (req, res) => {
     const db = readDB();
     const { number, status } = req.body;
@@ -348,7 +344,6 @@ app.post('/api/admin/tables', adminAuth, (req, res) => {
     res.status(201).json({ success: true, table: newTable });
 });
 
-// Update table (admin only)
 app.put('/api/admin/tables/:id', adminAuth, (req, res) => {
     const db = readDB();
     const index = db.tables.findIndex(t => t.id == req.params.id);
@@ -363,7 +358,6 @@ app.put('/api/admin/tables/:id', adminAuth, (req, res) => {
     }
 });
 
-// Update table QR code (admin only)
 app.put('/api/admin/tables/:id/qr', adminAuth, (req, res) => {
     const db = readDB();
     const index = db.tables.findIndex(t => t.id == req.params.id);
@@ -379,7 +373,6 @@ app.put('/api/admin/tables/:id/qr', adminAuth, (req, res) => {
     }
 });
 
-// Delete table (admin only)
 app.delete('/api/admin/tables/:id', adminAuth, (req, res) => {
     const db = readDB();
     const index = db.tables.findIndex(t => t.id == req.params.id);
@@ -394,10 +387,8 @@ app.delete('/api/admin/tables/:id', adminAuth, (req, res) => {
 });
 
 // ============ SERVE FRONTEND ============
-// Serve static files from frontend directory
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Handle all other routes for frontend SPA
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'API endpoint not found' });
@@ -406,7 +397,6 @@ app.get('*', (req, res) => {
 });
 
 // ============ START SERVER ============
-// Only start server if not in Vercel production
 if (!isProduction) {
     app.listen(PORT, () => {
         console.log(`\n========================================`);
@@ -414,10 +404,8 @@ if (!isProduction) {
         console.log(`========================================`);
         console.log(`📱 Frontend: http://localhost:${PORT}`);
         console.log(`📡 API: http://localhost:${PORT}/api/products`);
-        console.log(`🖼️  Uploads: http://localhost:${PORT}/uploads`);
         console.log(`========================================\n`);
     });
 }
 
-// Export for Vercel
 module.exports = app;

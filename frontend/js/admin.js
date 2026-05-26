@@ -64,15 +64,15 @@ async function loadProducts() {
         
         tbody.innerHTML = products.map(product => `
             <tr>
-                <td><img src="${product.image}" class="product-image-cell" onerror="this.src='https://via.placeholder.com/50'"></td>
-                <td>${escapeHtml(product.name)}</td>
-                <td>${product.category}</td>
-                <td>Rp ${Number(product.price).toLocaleString()}</td>
+                <td><img src="${product.image || 'https://via.placeholder.com/50'}" class="product-image-cell" onerror="this.src='https://via.placeholder.com/50'"></td>
+                <td><strong>${escapeHtml(product.name || 'No Name')}</strong></td>
+                <td>${product.category || '-'}</td>
+                <td>Rp ${(product.price || 0).toLocaleString()}</td>
                 <td>
                     <button class="action-btn edit-btn" onclick="editProduct(${product.id})"><i class="fas fa-edit"></i> Edit</button>
                     <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})"><i class="fas fa-trash"></i> Hapus</button>
-                </td>
-            </tr>
+                 </td>
+             </tr>
         `).join('');
     } catch (error) {
         console.error('Error:', error);
@@ -94,7 +94,8 @@ window.editProduct = async (id) => {
         document.getElementById('productPrice').value = product.price;
         document.getElementById('productDescription').value = product.description || '';
         
-        if (product.image) {
+        // Tampilkan preview gambar jika ada
+        if (product.image && product.image.startsWith('data:image')) {
             const previewContainer = document.getElementById('imagePreviewContainer');
             const previewImg = document.getElementById('imagePreview');
             if (previewContainer && previewImg) {
@@ -130,39 +131,82 @@ window.deleteProduct = async (id) => {
     }
 };
 
-// Save product
+// Helper function to convert file to base64
+function convertToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+// Save product (add/edit) - dengan base64 image
 const productForm = document.getElementById('productForm');
 if (productForm) {
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const id = document.getElementById('productId').value;
-        const formData = new FormData();
-        formData.append('name', document.getElementById('productName').value);
-        formData.append('category', document.getElementById('productCategory').value);
-        formData.append('price', document.getElementById('productPrice').value);
-        formData.append('description', document.getElementById('productDescription').value);
+        const name = document.getElementById('productName').value;
+        const category = document.getElementById('productCategory').value;
+        const price = document.getElementById('productPrice').value;
+        const description = document.getElementById('productDescription').value;
         
-        const imageFile = document.getElementById('productImage').files[0];
-        if (imageFile) {
-            formData.append('image', imageFile);
+        // Validasi input
+        if (!name) {
+            showToast('Nama produk harus diisi!', true);
+            return;
         }
+        
+        if (!price || price <= 0) {
+            showToast('Harga harus diisi dengan benar!', true);
+            return;
+        }
+        
+        // Proses gambar jika ada file yang dipilih
+        let imageBase64 = null;
+        const imageFile = document.getElementById('productImage').files[0];
+        
+        if (imageFile) {
+            // Konversi file ke base64
+            imageBase64 = await convertToBase64(imageFile);
+        }
+        
+        const productData = {
+            name: name,
+            category: category,
+            price: parseInt(price),
+            description: description,
+            image: imageBase64 // kirim base64
+        };
+        
+        console.log('Saving product with image:', imageFile ? 'Yes' : 'No');
         
         const url = id ? `${API_URL}/api/products/${id}` : `${API_URL}/api/products`;
         const method = id ? 'PUT' : 'POST';
         
         try {
-            const response = await fetch(url, { method: method, body: formData });
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            });
+            
             const result = await response.json();
+            console.log('Response:', result);
             
             if (response.ok) {
                 showToast(id ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan');
                 closeProductModal();
-                loadProducts();
+                loadProducts(); // Refresh daftar produk
             } else {
                 showToast(result.error || 'Gagal menyimpan produk', true);
             }
         } catch (error) {
+            console.error('Error:', error);
             showToast('Error: ' + error.message, true);
         }
     });
@@ -181,7 +225,7 @@ function closeProductModal() {
     if (productId) productId.value = '';
 }
 
-// Preview image
+// Preview image (untuk file upload)
 const productImageInput = document.getElementById('productImage');
 if (productImageInput) {
     productImageInput.addEventListener('change', (e) => {
@@ -257,7 +301,7 @@ async function loadTables() {
     }
 }
 
-// Edit table status - FIXED
+// Edit table status
 window.editTable = async (id, number, currentStatus) => {
     if (!adminToken) {
         showToast('Silakan login terlebih dahulu!', true);
@@ -292,7 +336,7 @@ window.editTable = async (id, number, currentStatus) => {
     }
 };
 
-// Delete table - FIXED
+// Delete table
 window.deleteTable = async (id) => {
     if (!adminToken) {
         showToast('Silakan login terlebih dahulu!', true);
@@ -322,7 +366,7 @@ window.deleteTable = async (id) => {
     }
 };
 
-// Add new table - FIXED
+// Add new table
 async function addTable(tableNumber, status) {
     if (!adminToken) {
         showToast('Silakan login terlebih dahulu!', true);
@@ -365,7 +409,7 @@ async function addTable(tableNumber, status) {
     }
 }
 
-// Close add table modal - FIXED
+// Close add table modal
 function closeAddTableModal() {
     const modal = document.getElementById('addTableModal');
     const form = document.getElementById('addTableForm');
@@ -373,7 +417,7 @@ function closeAddTableModal() {
     if (form) form.reset();
 }
 
-// Add table button - FIXED
+// Add table button
 const addTableBtn = document.getElementById('addTableBtn');
 if (addTableBtn) {
     addTableBtn.addEventListener('click', () => {
@@ -386,7 +430,7 @@ if (addTableBtn) {
     });
 }
 
-// Add table form submit - FIXED
+// Add table form submit
 const addTableForm = document.getElementById('addTableForm');
 if (addTableForm) {
     addTableForm.addEventListener('submit', (e) => {
@@ -681,7 +725,7 @@ navBtns.forEach(btn => {
     });
 });
 
-// Modal close buttons - FIXED
+// Modal close buttons
 document.querySelectorAll('.close').forEach(closeBtn => {
     closeBtn.onclick = () => {
         closeProductModal();

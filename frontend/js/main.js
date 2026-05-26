@@ -338,9 +338,6 @@ async function loadMenu(category = 'all') {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
     
-    // Display table info on menu page
-    displayTableInfoBar(localStorage.getItem('tableNumber'));
-    
     menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Memuat menu...</div>';
     
     try {
@@ -369,7 +366,7 @@ async function loadMenu(category = 'all') {
         
         menuGrid.innerHTML = filteredProducts.map(product => `
             <div class="product-card animate-fadeIn">
-                <img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                <img src="${product.image || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
                 <div class="product-info">
                     <h3 class="product-title">${escapeHtml(product.name)}</h3>
                     <p class="product-description">${escapeHtml(product.description || 'Nikmati kelezatan produk kami')}</p>
@@ -394,7 +391,6 @@ async function loadMenu(category = 'all') {
         `;
     }
 }
-
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)

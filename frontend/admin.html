@@ -489,45 +489,47 @@
     <!-- Hidden div untuk print struk -->
     <div id="receiptPrintArea" style="display: none;"></div>
 
-    <!-- Product Modal -->
-    <div id="productModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2 id="modalTitle">Tambah Produk</h2>
-            <form id="productForm" enctype="multipart/form-data">
-                <input type="hidden" id="productId">
-                <div class="form-group">
-                    <label>Nama Produk</label>
-                    <input type="text" id="productName" required>
+<!-- Product Modal -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="modalTitle">Tambah Produk</h2>
+        <form id="productForm">
+            <input type="hidden" id="productId">
+            <div class="form-group">
+                <label>Nama Produk *</label>
+                <input type="text" id="productName" required placeholder="Contoh: Ice Latte">
+            </div>
+            <div class="form-group">
+                <label>Kategori</label>
+                <select id="productCategory" required>
+                    <option value="kopi">☕ Kopi</option>
+                    <option value="makanan">🍚 Makanan</option>
+                    <option value="snack">🍿 Snack</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Harga (Rp) *</label>
+                <input type="number" id="productPrice" required placeholder="25000" min="0">
+            </div>
+            <div class="form-group">
+                <label>Deskripsi</label>
+                <textarea id="productDescription" rows="3" placeholder="Deskripsi produk..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Gambar Produk</label>
+                <input type="file" id="productImage" accept="image/*">
+                <small style="color: #666; display: block; margin-top: 5px;">Upload gambar produk (max 5MB)</small>
+                <div class="image-preview" id="imagePreviewContainer" style="display:none; margin-top: 10px;">
+                    <img id="imagePreview" src="" style="max-width: 100px; border-radius: 8px;">
                 </div>
-                <div class="form-group">
-                    <label>Kategori</label>
-                    <select id="productCategory" required>
-                        <option value="kopi">☕ Kopi</option>
-                        <option value="makanan">🍚 Makanan</option>
-                        <option value="snack">🍿 Snack</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Harga (Rp)</label>
-                    <input type="number" id="productPrice" required>
-                </div>
-                <div class="form-group">
-                    <label>Deskripsi</label>
-                    <textarea id="productDescription" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Gambar Produk</label>
-                    <input type="file" id="productImage" accept="image/*">
-                    <div class="image-preview" id="imagePreviewContainer" style="display:none;">
-                        <img id="imagePreview" src="">
-                    </div>
-                </div>
-                <button type="submit" class="btn-primary" style="width:100%"><i class="fas fa-save"></i> Simpan</button>
-            </form>
-        </div>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%">
+                <i class="fas fa-save"></i> Simpan
+            </button>
+        </form>
     </div>
-
+</div>
     <div id="toast" class="toast"></div>
 
     <script src="js/admin.js"></script>
