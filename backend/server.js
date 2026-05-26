@@ -3,7 +3,6 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const mysql = require('mysql2');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,177 +15,187 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-// Middleware
+// Middleware - increase limit for base64 images
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ============ MYSQL CONNECTION ============
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'cafe_ironcolol',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
+// ============ MULTER CONFIGURATION FOR IMAGE UPLOAD ============
+// Hanya aktif jika bukan production (Vercel)
+const isProduction = process.env.NODE_ENV === 'production';
+let upload = null;
 
-const promisePool = pool.promise();
+if (!isProduction) {
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            const uploadDir = './uploads';
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            cb(null, uploadDir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, uniqueSuffix + path.extname(file.originalname));
+        }
+    });
 
-// Buat tabel jika belum ada
-async function initDatabase() {
-    try {
-        // Tabel products
-        await promisePool.execute(`
-            CREATE TABLE IF NOT EXISTS products (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                name VARCHAR(255) NOT NULL,
-                category VARCHAR(100) DEFAULT 'snack',
-                price INT NOT NULL,
-                description TEXT,
-                image TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+    const fileFilter = (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
         
-        // Tabel orders
-        await promisePool.execute(`
-            CREATE TABLE IF NOT EXISTS orders (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                items JSON,
-                total INT DEFAULT 0,
-                status VARCHAR(50) DEFAULT 'pending',
-                customer_name VARCHAR(255),
-                customer_phone VARCHAR(50),
-                customer_address TEXT,
-                table_number VARCHAR(50),
-                note TEXT,
-                payment_method VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        // Tabel cafe_tables
-        await promisePool.execute(`
-            CREATE TABLE IF NOT EXISTS cafe_tables (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                number INT UNIQUE NOT NULL,
-                status VARCHAR(50) DEFAULT 'available',
-                is_active BOOLEAN DEFAULT TRUE,
-                qr_code TEXT,
-                qr_code_url TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        console.log('✅ MySQL tables ready');
-        
-        // Insert initial tables if empty
-        const [tables] = await promisePool.execute('SELECT COUNT(*) as count FROM cafe_tables');
-        if (tables[0].count === 0) {
-            for (let i = 1; i <= 10; i++) {
-                await promisePool.execute(
-                    'INSERT INTO cafe_tables (number, status) VALUES (?, ?)',
-                    [i, 'available']
-                );
-            }
-            console.log('Initial tables seeded');
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Hanya gambar yang diperbolehkan!'));
         }
-        
-        // Insert initial products if empty
-        const [products] = await promisePool.execute('SELECT COUNT(*) as count FROM products');
-        if (products[0].count === 0) {
-            const initialProducts = [
-                ['Espresso', 'kopi', 25000, 'Kopi hitam pekat dengan crema', 'https://via.placeholder.com/300x200?text=Espresso'],
-                ['Cappuccino', 'kopi', 32000, 'Espresso dengan busa susu', 'https://via.placeholder.com/300x200?text=Cappuccino'],
-                ['French Fries', 'snack', 18000, 'Kentang goreng renyah', 'https://via.placeholder.com/300x200?text=French+Fries'],
-                ['Nasi Goreng', 'makanan', 35000, 'Nasi goreng spesial', 'https://via.placeholder.com/300x200?text=Nasi+Goreng']
-            ];
-            for (const product of initialProducts) {
-                await promisePool.execute(
-                    'INSERT INTO products (name, category, price, description, image) VALUES (?, ?, ?, ?, ?)',
-                    product
-                );
-            }
-            console.log('Initial products seeded');
-        }
-        
-    } catch (error) {
-        console.error('❌ Database init error:', error);
-    }
+    };
+
+    upload = multer({ 
+        storage: storage,
+        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+        fileFilter: fileFilter
+    });
+
+    // Serve uploaded files statically (only local)
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 }
 
-// ============ MULTER CONFIGURATION ============
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = './uploads';
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-    }
-});
-
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    if (allowedTypes.test(path.extname(file.originalname).toLowerCase()) && allowedTypes.test(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error('Hanya gambar yang diperbolehkan!'));
-    }
+// ============ DATABASE ============
+let database = {
+    products: [
+        {
+            id: 1,
+            name: "Espresso",
+            category: "kopi",
+            price: 25000,
+            image: null, // akan diisi base64
+            imageUrl: "https://via.placeholder.com/300x200?text=Espresso",
+            description: "Kopi hitam pekat dengan crema"
+        },
+        {
+            id: 2,
+            name: "Cappuccino",
+            category: "kopi",
+            price: 32000,
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=Cappuccino",
+            description: "Espresso dengan busa susu"
+        },
+        {
+            id: 3,
+            name: "French Fries",
+            category: "snack",
+            price: 18000,
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=French+Fries",
+            description: "Kentang goreng renyah"
+        },
+        {
+            id: 4,
+            name: "Nasi Goreng",
+            category: "makanan",
+            price: 35000,
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=Nasi+Goreng",
+            description: "Nasi goreng spesial dengan telur"
+        }
+    ],
+    orders: [],
+    tables: Array.from({ length: 10 }, (_, i) => ({ 
+        id: i + 1, 
+        number: i + 1,
+        status: 'available',
+        isActive: true,
+        qrCode: null,
+        qrCodeUrl: null,
+        createdAt: new Date().toISOString()
+    }))
 };
 
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter });
-app.use('/uploads', express.static('uploads'));
+// Helper functions
+function readDB() {
+    return database;
+}
+
+function writeDB(data) {
+    database = data;
+}
 
 // ============ ADMIN AUTH ============
+function adminAuth(req, res, next) {
+    const token = req.headers['authorization'];
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized access - No token' });
+    }
+    
+    if (token && token.includes('admin_token_')) {
+        return next();
+    }
+    
+    return res.status(401).json({ error: 'Unauthorized access - Invalid token' });
+}
+
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
+    
     if (username === 'admin' && password === 'admin123') {
-        res.json({ success: true, token: 'admin_token_' + Date.now() });
+        res.json({ 
+            success: true, 
+            token: 'admin_token_' + Date.now(),
+            message: 'Login successful' 
+        });
     } else {
-        res.status(401).json({ success: false, error: 'Username atau password salah!' });
+        res.status(401).json({ 
+            success: false,
+            error: 'Username atau password salah!' 
+        });
     }
 });
 
 // ============ PRODUCT ROUTES ============
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', (req, res) => {
     try {
-        const [rows] = await promisePool.execute('SELECT * FROM products ORDER BY created_at DESC');
-        res.json(rows);
+        const db = readDB();
+        // Kirimkan imageUrl untuk ditampilkan (bukan base64)
+        const products = db.products.map(p => ({
+            ...p,
+            image: p.imageUrl || 'https://via.placeholder.com/300x200?text=Product'
+        }));
+        res.json(products);
     } catch (error) {
         console.error('Error getting products:', error);
-        res.status(500).json({ error: 'Failed to fetch products' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-app.get('/api/products/:id', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
-        if (rows.length > 0) {
-            res.json(rows[0]);
-        } else {
-            res.status(404).json({ error: 'Product not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Invalid ID' });
+app.get('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const product = db.products.find(p => p.id == req.params.id);
+    if (product) {
+        res.json({
+            ...product,
+            image: product.imageUrl || 'https://via.placeholder.com/300x200?text=Product'
+        });
+    } else {
+        res.status(404).json({ error: 'Product not found' });
     }
 });
 
-app.get('/api/products/category/:category', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM products WHERE category = ?', [req.params.category]);
-        res.json(rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch products' });
-    }
+app.get('/api/products/category/:category', (req, res) => {
+    const db = readDB();
+    const products = db.products.filter(p => p.category === req.params.category);
+    res.json(products);
 });
 
-app.post('/api/products', upload.single('image'), async (req, res) => {
+// POST product (tambah produk baru) - dengan base64 image
+app.post('/api/products', (req, res) => {
     try {
-        const { name, category, price, description } = req.body;
+        const db = readDB();
+        const { name, category, price, description, image } = req.body;
         
+        // Validasi input
         if (!name) {
             return res.status(400).json({ error: 'Nama produk harus diisi!' });
         }
@@ -195,163 +204,185 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
             return res.status(400).json({ error: 'Harga tidak valid!' });
         }
         
-        let imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+        const newProduct = {
+            id: Date.now(),
+            name: name,
+            category: category || 'snack',
+            price: parseInt(price),
+            description: description || '',
+            image: image || null, // simpan base64 jika ada
+            imageUrl: image || 'https://via.placeholder.com/300x200?text=Product'
+        };
         
-        const [result] = await promisePool.execute(
-            'INSERT INTO products (name, category, price, description, image) VALUES (?, ?, ?, ?, ?)',
-            [name, category || 'snack', parseInt(price), description || '', imageUrl]
-        );
-        
-        console.log('Product added:', name);
-        res.status(201).json({ success: true, id: result.insertId });
+        db.products.push(newProduct);
+        writeDB(db);
+        console.log('Product added:', newProduct.name);
+        res.status(201).json({ 
+            success: true, 
+            product: {
+                ...newProduct,
+                image: newProduct.imageUrl
+            }
+        });
     } catch (error) {
         console.error('Error adding product:', error);
-        res.status(500).json({ error: 'Failed to add product' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-app.put('/api/products/:id', upload.single('image'), async (req, res) => {
-    try {
-        const { name, category, price, description } = req.body;
-        let imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+// PUT (update) product
+app.put('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const productId = parseInt(req.params.id);
+    const index = db.products.findIndex(p => p.id === productId);
+    
+    if (index !== -1) {
+        const updatedProduct = {
+            ...db.products[index],
+            name: req.body.name || db.products[index].name,
+            category: req.body.category || db.products[index].category,
+            price: parseInt(req.body.price) || db.products[index].price,
+            description: req.body.description || db.products[index].description,
+            image: req.body.image || db.products[index].image,
+            imageUrl: req.body.image || db.products[index].imageUrl
+        };
         
-        if (imageUrl) {
-            await promisePool.execute(
-                'UPDATE products SET name=?, category=?, price=?, description=?, image=? WHERE id=?',
-                [name, category, parseInt(price), description, imageUrl, req.params.id]
-            );
-        } else {
-            await promisePool.execute(
-                'UPDATE products SET name=?, category=?, price=?, description=? WHERE id=?',
-                [name, category, parseInt(price), description, req.params.id]
-            );
-        }
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error updating product:', error);
-        res.status(500).json({ error: 'Update failed' });
+        db.products[index] = updatedProduct;
+        writeDB(db);
+        res.json({ success: true, product: updatedProduct });
+    } else {
+        res.status(404).json({ error: 'Product not found', id: productId });
     }
 });
 
-app.delete('/api/products/:id', async (req, res) => {
-    try {
-        await promisePool.execute('DELETE FROM products WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Product deleted' });
-    } catch (error) {
-        res.status(500).json({ error: 'Delete failed' });
-    }
+app.delete('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const productId = parseInt(req.params.id);
+    db.products = db.products.filter(p => p.id !== productId);
+    writeDB(db);
+    res.json({ message: 'Product deleted' });
 });
 
 // ============ ORDER ROUTES ============
-app.post('/api/orders', async (req, res) => {
-    try {
-        const { items, total, customerName, customerPhone, customerAddress, tableNumber, note, paymentMethod } = req.body;
-        const [result] = await promisePool.execute(
-            'INSERT INTO orders (items, total, customer_name, customer_phone, customer_address, table_number, note, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [JSON.stringify(items), total, customerName, customerPhone, customerAddress, tableNumber, note, paymentMethod]
-        );
-        res.json({ success: true, id: result.insertId });
-    } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ error: 'Failed to create order' });
+app.post('/api/orders', (req, res) => {
+    const db = readDB();
+    const newOrder = {
+        id: Date.now(),
+        items: req.body.items || [],
+        total: req.body.total || 0,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        customerName: req.body.customerName || null,
+        customerPhone: req.body.customerPhone || null,
+        customerAddress: req.body.customerAddress || null,
+        tableNumber: req.body.tableNumber || null,
+        note: req.body.note || null,
+        paymentMethod: req.body.paymentMethod || null
+    };
+    db.orders.push(newOrder);
+    writeDB(db);
+    res.json(newOrder);
+});
+
+app.get('/api/orders', (req, res) => {
+    const db = readDB();
+    res.json(db.orders);
+});
+
+app.put('/api/orders/:id', (req, res) => {
+    const db = readDB();
+    const index = db.orders.findIndex(o => o.id == req.params.id);
+    if (index !== -1) {
+        db.orders[index].status = req.body.status || db.orders[index].status;
+        writeDB(db);
+        res.json(db.orders[index]);
+    } else {
+        res.status(404).json({ error: 'Order not found' });
     }
 });
 
-app.get('/api/orders', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM orders ORDER BY created_at DESC');
-        const orders = rows.map(order => ({ ...order, items: JSON.parse(order.items || '[]') }));
-        res.json(orders);
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).json({ error: 'Failed to fetch orders' });
+// ============ TABLE MANAGEMENT ROUTES ============
+app.get('/api/tables', (req, res) => {
+    const db = readDB();
+    res.json(db.tables);
+});
+
+app.get('/api/tables/:id', (req, res) => {
+    const db = readDB();
+    const table = db.tables.find(t => t.id == req.params.id);
+    if (table) {
+        res.json(table);
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
-app.put('/api/orders/:id', async (req, res) => {
-    try {
-        await promisePool.execute('UPDATE orders SET status = ? WHERE id = ?', [req.body.status, req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
+app.post('/api/admin/tables', adminAuth, (req, res) => {
+    const db = readDB();
+    const { number, status } = req.body;
+    
+    if (!number) {
+        return res.status(400).json({ error: 'Nomor meja harus diisi!' });
+    }
+    
+    if (db.tables.some(t => t.number == number)) {
+        return res.status(400).json({ error: 'Nomor meja sudah ada!' });
+    }
+    
+    const newTable = {
+        id: Date.now(),
+        number: parseInt(number),
+        status: status || 'available',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        qrCode: null,
+        qrCodeUrl: null
+    };
+    
+    db.tables.push(newTable);
+    writeDB(db);
+    res.status(201).json({ success: true, table: newTable });
+});
+
+app.put('/api/admin/tables/:id', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        if (req.body.status) db.tables[index].status = req.body.status;
+        if (req.body.isActive !== undefined) db.tables[index].isActive = req.body.isActive;
+        writeDB(db);
+        res.json({ success: true, table: db.tables[index] });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
-// ============ TABLE ROUTES ============
-app.get('/api/tables', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM cafe_tables ORDER BY number ASC');
-        res.json(rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch tables' });
+app.put('/api/admin/tables/:id/qr', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        if (req.body.qrCode) db.tables[index].qrCode = req.body.qrCode;
+        if (req.body.qrCodeUrl) db.tables[index].qrCodeUrl = req.body.qrCodeUrl;
+        db.tables[index].updatedAt = new Date().toISOString();
+        writeDB(db);
+        res.json({ success: true, table: db.tables[index] });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
-app.get('/api/tables/:id', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM cafe_tables WHERE id = ?', [req.params.id]);
-        if (rows.length > 0) {
-            res.json(rows[0]);
-        } else {
-            res.status(404).json({ error: 'Table not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Invalid ID' });
-    }
-});
-
-app.post('/api/admin/tables', async (req, res) => {
-    try {
-        const { number, status } = req.body;
-        
-        if (!number) {
-            return res.status(400).json({ error: 'Nomor meja harus diisi!' });
-        }
-        
-        const [existing] = await promisePool.execute('SELECT * FROM cafe_tables WHERE number = ?', [number]);
-        if (existing.length > 0) {
-            return res.status(400).json({ error: 'Nomor meja sudah ada!' });
-        }
-        
-        const [result] = await promisePool.execute(
-            'INSERT INTO cafe_tables (number, status) VALUES (?, ?)',
-            [number, status || 'available']
-        );
-        res.status(201).json({ success: true, id: result.insertId });
-    } catch (error) {
-        console.error('Error adding table:', error);
-        res.status(500).json({ error: 'Failed to add table' });
-    }
-});
-
-app.put('/api/admin/tables/:id', async (req, res) => {
-    try {
-        await promisePool.execute('UPDATE cafe_tables SET status = ? WHERE id = ?', [req.body.status, req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
-});
-
-app.put('/api/admin/tables/:id/qr', async (req, res) => {
-    try {
-        await promisePool.execute(
-            'UPDATE cafe_tables SET qr_code = ?, qr_code_url = ? WHERE id = ?',
-            [req.body.qrCode, req.body.qrCodeUrl, req.params.id]
-        );
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
-});
-
-app.delete('/api/admin/tables/:id', async (req, res) => {
-    try {
-        await promisePool.execute('DELETE FROM cafe_tables WHERE id = ?', [req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Delete failed' });
+app.delete('/api/admin/tables/:id', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        db.tables.splice(index, 1);
+        writeDB(db);
+        res.json({ success: true, message: 'Table deleted' });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
@@ -366,17 +397,15 @@ app.get('*', (req, res) => {
 });
 
 // ============ START SERVER ============
-initDatabase().then(() => {
+if (!isProduction) {
     app.listen(PORT, () => {
         console.log(`\n========================================`);
         console.log(`🚀 Cafe IronColol Server Running!`);
         console.log(`========================================`);
         console.log(`📱 Frontend: http://localhost:${PORT}`);
         console.log(`📡 API: http://localhost:${PORT}/api/products`);
-        console.log(`🛢️  MySQL: Connected`);
-        console.log(`📊 phpMyAdmin: http://localhost/phpmyadmin`);
         console.log(`========================================\n`);
     });
-});
+}
 
 module.exports = app;
