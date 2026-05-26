@@ -20,41 +20,46 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============ MULTER CONFIGURATION FOR IMAGE UPLOAD ============
-// Setup multer for image upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = './uploads';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Hanya aktif jika bukan production (Vercel)
+const isProduction = process.env.NODE_ENV === 'production';
+let upload = null;
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-  
-  if (mimetype && extname) {
-    return cb(null, true);
-  } else {
-    cb(new Error('Hanya gambar yang diperbolehkan!'));
-  }
-};
+if (!isProduction) {
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            const uploadDir = './uploads';
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            cb(null, uploadDir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            cb(null, uniqueSuffix + path.extname(file.originalname));
+        }
+    });
 
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: fileFilter
-});
+    const fileFilter = (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Hanya gambar yang diperbolehkan!'));
+        }
+    };
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+    upload = multer({ 
+        storage: storage,
+        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+        fileFilter: fileFilter
+    });
+
+    // Serve uploaded files statically (only local)
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
 
 // ============ DATABASE ============
 let database = {
@@ -148,7 +153,6 @@ function writeDB(data) {
 // ============ ADMIN AUTH ============
 function adminAuth(req, res, next) {
     const token = req.headers['authorization'];
-    const db = readDB();
     
     if (!token) {
         return res.status(401).json({ error: 'Unauthorized access - No token' });
@@ -183,7 +187,6 @@ app.post('/api/admin/login', (req, res) => {
 app.get('/api/products', (req, res) => {
     try {
         const db = readDB();
-        console.log('Sending products:', db.products.length);
         res.json(db.products);
     } catch (error) {
         console.error('Error getting products:', error);
@@ -208,30 +211,31 @@ app.get('/api/products/category/:category', (req, res) => {
     res.json(products);
 });
 
-// POST product with image upload
-app.post('/api/products', upload.single('image'), (req, res) => {
+// POST product with image upload (if upload available)
+app.post('/api/products', (req, res) => {
     const db = readDB();
+    
+    // Handle file upload if available (local) or just use body (Vercel)
+    let imageUrl = req.body.image || 'https://via.placeholder.com/300x200?text=Product';
+    
     const newProduct = {
         id: Date.now(),
         name: req.body.name,
         category: req.body.category,
         price: parseInt(req.body.price),
         description: req.body.description || '',
-        image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || 'https://via.placeholder.com/300x200?text=Product')
+        image: imageUrl
     };
     db.products.push(newProduct);
     writeDB(db);
     res.json(newProduct);
 });
 
-// PUT (update) product with image upload
-app.put('/api/products/:id', upload.single('image'), (req, res) => {
+// PUT (update) product
+app.put('/api/products/:id', (req, res) => {
     const db = readDB();
     const productId = parseInt(req.params.id);
     const index = db.products.findIndex(p => p.id === productId);
-    
-    console.log('Updating product ID:', productId);
-    console.log('Found at index:', index);
     
     if (index !== -1) {
         const updatedProduct = {
@@ -240,15 +244,13 @@ app.put('/api/products/:id', upload.single('image'), (req, res) => {
             category: req.body.category || db.products[index].category,
             price: parseInt(req.body.price) || db.products[index].price,
             description: req.body.description || db.products[index].description,
-            image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || db.products[index].image)
+            image: req.body.image || db.products[index].image
         };
         
         db.products[index] = updatedProduct;
         writeDB(db);
-        console.log('Product updated:', updatedProduct);
         res.json({ success: true, product: updatedProduct });
     } else {
-        console.log('Product not found with ID:', productId);
         res.status(404).json({ error: 'Product not found', id: productId });
     }
 });
@@ -323,12 +325,10 @@ app.post('/api/admin/tables', adminAuth, (req, res) => {
     const db = readDB();
     const { number, status } = req.body;
     
-    // Validate input
     if (!number) {
         return res.status(400).json({ error: 'Nomor meja harus diisi!' });
     }
     
-    // Check if table number already exists
     if (db.tables.some(t => t.number == number)) {
         return res.status(400).json({ error: 'Nomor meja sudah ada!' });
     }
@@ -394,28 +394,30 @@ app.delete('/api/admin/tables/:id', adminAuth, (req, res) => {
 });
 
 // ============ SERVE FRONTEND ============
-// Untuk production di Vercel, frontend sudah di serve secara terpisah
-if (process.env.NODE_ENV !== 'production') {
-    app.use(express.static(path.join(__dirname, '../frontend')));
-    
-    app.get('*', (req, res) => {
-        if (req.path.startsWith('/api/')) {
-            return res.status(404).json({ error: 'API endpoint not found' });
-        }
-        res.sendFile(path.join(__dirname, '../frontend/index.html'));
-    });
-}
+// Serve static files from frontend directory
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Handle all other routes for frontend SPA
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
 
 // ============ START SERVER ============
-app.listen(PORT, () => {
-    console.log(`\n========================================`);
-    console.log(`🚀 Cafe IronColol Server Running!`);
-    console.log(`========================================`);
-    console.log(`📱 Frontend: http://localhost:${PORT}`);
-    console.log(`📡 API: http://localhost:${PORT}/api/products`);
-    console.log(`🖼️  Uploads: http://localhost:${PORT}/uploads`);
-    console.log(`========================================\n`);
-});
+// Only start server if not in Vercel production
+if (!isProduction) {
+    app.listen(PORT, () => {
+        console.log(`\n========================================`);
+        console.log(`🚀 Cafe IronColol Server Running!`);
+        console.log(`========================================`);
+        console.log(`📱 Frontend: http://localhost:${PORT}`);
+        console.log(`📡 API: http://localhost:${PORT}/api/products`);
+        console.log(`🖼️  Uploads: http://localhost:${PORT}/uploads`);
+        console.log(`========================================\n`);
+    });
+}
 
 // Export for Vercel
 module.exports = app;

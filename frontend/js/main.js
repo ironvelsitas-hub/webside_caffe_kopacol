@@ -67,21 +67,90 @@ function checkTableFromURL() {
     if (tableNumber) {
         localStorage.setItem('tableNumber', tableNumber);
         showToast(`Terhubung ke Meja ${tableNumber}`);
+        displayTableInfoBar(tableNumber);
         return true;
     }
     return false;
 }
 
+// Display table info bar
+function displayTableInfoBar(tableNumber) {
+    const tableInfoBar = document.getElementById('tableInfoBar');
+    const currentTableSpan = document.getElementById('currentTableNumber');
+    
+    if (tableNumber && tableInfoBar && currentTableSpan) {
+        currentTableSpan.textContent = `Meja ${tableNumber}`;
+        tableInfoBar.style.display = 'flex';
+    } else if (tableInfoBar) {
+        tableInfoBar.style.display = 'none';
+    }
+}
+
+// Change table function
+window.changeTable = function() {
+    localStorage.removeItem('tableNumber');
+    window.location.href = 'index.html';
+};
+
+// Load available tables from server for manual selection
+async function loadAvailableTables() {
+    try {
+        const response = await fetch(`${API_URL}/api/tables`);
+        const tables = await response.json();
+        const manualTableList = document.getElementById('manualTableList');
+        
+        if (manualTableList) {
+            if (!tables || tables.length === 0) {
+                manualTableList.innerHTML = '<div class="text-center" style="grid-column: 1/-1;">Belum ada meja yang tersedia</div>';
+                return;
+            }
+            
+            // Filter hanya meja yang aktif
+            const activeTables = tables.filter(t => t.isActive !== false);
+            
+            if (activeTables.length === 0) {
+                manualTableList.innerHTML = '<div class="text-center" style="grid-column: 1/-1;">Belum ada meja aktif</div>';
+                return;
+            }
+            
+            manualTableList.innerHTML = activeTables.map(table => `
+                <button class="manual-table-btn" data-table="${table.number}" style="padding: 0.8rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1rem;">
+                    Meja ${table.number}
+                </button>
+            `).join('');
+            
+            // Add event listeners to buttons
+            document.querySelectorAll('.manual-table-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const tableNumber = btn.dataset.table;
+                    localStorage.setItem('tableNumber', tableNumber);
+                    showToast(`Terhubung ke Meja ${tableNumber}`);
+                    const manualModal = document.getElementById('manualTableModal');
+                    if (manualModal) manualModal.style.display = 'none';
+                    window.location.href = `menu.html?table=${tableNumber}`;
+                };
+            });
+        }
+    } catch (error) {
+        console.error('Error loading tables:', error);
+        const manualTableList = document.getElementById('manualTableList');
+        if (manualTableList) {
+            manualTableList.innerHTML = '<div class="text-center" style="grid-column: 1/-1;">Gagal memuat daftar meja</div>';
+        }
+    }
+}
+
 // Start QR Scanner
 async function startQrScanner() {
     const qrReaderId = "qr-reader";
-    const statusDiv = document.getElementById('scannerStatus');
+    const qrStatus = document.getElementById('qr-status');
     
     // Cek library
     if (typeof Html5Qrcode === 'undefined') {
-        if (statusDiv) {
-            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Library tidak tersedia. Silakan pilih meja manual.';
-            statusDiv.className = 'scanner-status status-error';
+        if (qrStatus) {
+            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Library tidak tersedia. Silakan pilih meja manual.';
+            qrStatus.style.background = '#fee2e2';
+            qrStatus.style.color = '#dc2626';
         }
         showToast('Scanner tidak tersedia, gunakan pilihan manual', true);
         return;
@@ -132,21 +201,24 @@ async function startQrScanner() {
             },
             (errorMessage) => {
                 // Silent error
+                console.debug("Scanning...");
             }
         );
         
         isScanning = true;
-        if (statusDiv) {
-            statusDiv.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
-            statusDiv.className = 'scanner-status status-scanning';
+        if (qrStatus) {
+            qrStatus.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
+            qrStatus.style.background = '#d1fae5';
+            qrStatus.style.color = '#059669';
         }
         showToast('Kamera dimulai, arahkan ke QR code meja');
         
     } catch (err) {
         console.error("Error:", err);
-        if (statusDiv) {
-            statusDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat akses kamera. ' + err.message;
-            statusDiv.className = 'scanner-status status-error';
+        if (qrStatus) {
+            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat akses kamera. ' + err.message;
+            qrStatus.style.background = '#fee2e2';
+            qrStatus.style.color = '#dc2626';
         }
         showToast('Tidak dapat akses kamera, gunakan pilihan manual', true);
     }
@@ -177,17 +249,18 @@ function handleScanResult(decodedText) {
     }
     else {
         const match = decodedText.match(/(\d+)/);
-        if (match && match[1] >= 1 && match[1] <= 10) {
+        if (match && match[1] >= 1) {
             tableNumber = match[1];
         }
     }
     
-    if (tableNumber && tableNumber >= 1 && tableNumber <= 10) {
+    if (tableNumber && tableNumber >= 1) {
         // Update status
-        const statusDiv = document.getElementById('scannerStatus');
-        if (statusDiv) {
-            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Berhasil! Meja ${tableNumber} terdeteksi`;
-            statusDiv.className = 'scanner-status status-success';
+        const qrStatus = document.getElementById('qr-status');
+        if (qrStatus) {
+            qrStatus.innerHTML = `<i class="fas fa-check-circle"></i> Berhasil! Meja ${tableNumber} terdeteksi`;
+            qrStatus.style.background = '#d1fae5';
+            qrStatus.style.color = '#059669';
         }
         
         stopQrScanner();
@@ -229,10 +302,11 @@ function initQRScanner() {
     if (stopScanBtn) {
         stopScanBtn.onclick = () => {
             stopQrScanner();
-            const statusDiv = document.getElementById('scannerStatus');
-            if (statusDiv) {
-                statusDiv.innerHTML = '<i class="fas fa-stop"></i> Scanner dihentikan';
-                statusDiv.className = 'scanner-status status-error';
+            const qrStatus = document.getElementById('qr-status');
+            if (qrStatus) {
+                qrStatus.innerHTML = '<i class="fas fa-stop"></i> Scanner dihentikan';
+                qrStatus.style.background = '#fee2e2';
+                qrStatus.style.color = '#dc2626';
             }
         };
     }
@@ -247,6 +321,8 @@ function initQRScanner() {
             stopQrScanner();
             qrModal.style.display = 'none';
             manualModal.style.display = 'block';
+            // Load daftar meja saat modal manual dibuka
+            loadAvailableTables();
         };
         
         if (closeManual) {
@@ -254,16 +330,6 @@ function initQRScanner() {
                 manualModal.style.display = 'none';
             };
         }
-        
-        document.querySelectorAll('.table-btn').forEach(btn => {
-            btn.onclick = () => {
-                const tableNumber = btn.dataset.table;
-                localStorage.setItem('tableNumber', tableNumber);
-                showToast(`Terhubung ke Meja ${tableNumber}`);
-                manualModal.style.display = 'none';
-                window.location.href = `menu.html?table=${tableNumber}`;
-            };
-        });
     }
 }
 
@@ -271,6 +337,9 @@ function initQRScanner() {
 async function loadMenu(category = 'all') {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
+    
+    // Display table info on menu page
+    displayTableInfoBar(localStorage.getItem('tableNumber'));
     
     menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Memuat menu...</div>';
     
@@ -406,6 +475,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     checkTableFromURL();
     displayTableInfo();
+    
+    // Display table info bar if table number exists
+    const savedTableNumber = localStorage.getItem('tableNumber');
+    if (savedTableNumber && window.location.pathname.includes('menu.html')) {
+        displayTableInfoBar(savedTableNumber);
+    }
     
     if (document.getElementById('menuGrid')) {
         loadMenu();

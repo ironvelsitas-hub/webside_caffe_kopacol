@@ -2,11 +2,136 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keranjang - Cafe IronColol</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Keranjang & Pembayaran - Cafe IronColol</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .payment-methods {
+            margin-top: 1.5rem;
+        }
+        .payment-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        .payment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .payment-option {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .payment-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .payment-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .payment-option i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .payment-option .qris-icon { color: #10b981; }
+        .payment-option .bca-icon { color: #0055a4; }
+        .payment-option .bri-icon { color: #0066b3; }
+        .payment-option .dana-icon { color: #2b7a3e; }
+        .payment-option .ovo-icon { color: #4a148c; }
+        .payment-option .name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .payment-detail {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        .payment-detail.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .bank-info, .ewallet-info {
+            text-align: center;
+        }
+        .bank-number, .ewallet-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            letter-spacing: 2px;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+        .qris-code {
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .qris-code img {
+            width: 200px;
+            height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            padding: 10px;
+            background: white;
+        }
+        .confirm-payment {
+            width: 100%;
+            padding: 1rem;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s;
+        }
+        .confirm-payment:hover {
+            background: #059669;
+            transform: scale(1.02);
+        }
+        .upload-proof {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px dashed #ddd;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .upload-proof input {
+            margin-top: 0.5rem;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -19,12 +144,21 @@
                 <li><a href="index.html" class="nav-link">Beranda</a></li>
                 <li><a href="menu.html" class="nav-link">Menu</a></li>
             </ul>
+            <div class="nav-icons">
+                <a href="cart.html" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count">0</span>
+                </a>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </div>
         </div>
     </nav>
 
     <section class="cart-page">
         <div class="container">
-            <h1>Keranjang Belanja</h1>
+            <h1><i class="fas fa-shopping-cart"></i> Keranjang Belanja</h1>
             <div id="cartContent">
                 <div class="cart-empty">
                     <i class="fas fa-shopping-cart"></i>
@@ -32,19 +166,136 @@
                     <a href="menu.html" class="btn btn-primary">Mulai Belanja</a>
                 </div>
             </div>
+            
+            <div id="paymentSection" style="display: none;">
+                <div class="payment-methods">
+                    <div class="payment-title">
+                        <i class="fas fa-credit-card"></i> Pilih Metode Pembayaran
+                    </div>
+                    <div class="payment-options">
+                        <div class="payment-option" data-method="qris">
+                            <i class="fas fa-qrcode qris-icon"></i>
+                            <div class="name">QRIS</div>
+                            <small>Scan QR Code</small>
+                        </div>
+                        <div class="payment-option" data-method="bca">
+                            <i class="fas fa-university bca-icon"></i>
+                            <div class="name">BCA</div>
+                            <small>Transfer Bank</small>
+                        </div>
+                        <div class="payment-option" data-method="bri">
+                            <i class="fas fa-university bri-icon"></i>
+                            <div class="name">BRI</div>
+                            <small>Transfer Bank</small>
+                        </div>
+                        <div class="payment-option" data-method="dana">
+                            <i class="fas fa-wallet dana-icon"></i>
+                            <div class="name">DANA</div>
+                            <small>E-Wallet</small>
+                        </div>
+                        <div class="payment-option" data-method="ovo">
+                            <i class="fas fa-mobile-alt ovo-icon"></i>
+                            <div class="name">OVO</div>
+                            <small>E-Wallet</small>
+                        </div>
+                    </div>
+
+                    <!-- QRIS Payment Detail -->
+                    <div id="qrisDetail" class="payment-detail">
+                        <div class="qris-code">
+                            <h3>Scan QR Code untuk Membayar</h3>
+                            <img id="qrisImage" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=QRIS_IRONCOLOL_CAFE_2024" alt="QRIS Code">
+                            <p class="qr-info">Gunakan aplikasi mobile banking atau e-wallet yang mendukung QRIS</p>
+                        </div>
+                    </div>
+
+                    <!-- BCA Payment Detail -->
+                    <div id="bcaDetail" class="payment-detail">
+                        <div class="bank-info">
+                            <h3><i class="fas fa-university"></i> Bank BCA</h3>
+                            <div class="bank-number">
+                                123 456 7890
+                                <button class="copy-btn" onclick="copyToClipboard('1234567890')">Salin</button>
+                            </div>
+                            <p>a.n Cafe IronColol</p>
+                            <p>Kode Bank: 014</p>
+                            <p>Cabang: Jakarta Pusat</p>
+                        </div>
+                    </div>
+
+                    <!-- BRI Payment Detail -->
+                    <div id="briDetail" class="payment-detail">
+                        <div class="bank-info">
+                            <h3><i class="fas fa-university"></i> Bank BRI</h3>
+                            <div class="bank-number">
+                                0987 6543 210
+                                <button class="copy-btn" onclick="copyToClipboard('09876543210')">Salin</button>
+                            </div>
+                            <p>a.n Cafe IronColol</p>
+                            <p>Kode Bank: 002</p>
+                            <p>Cabang: Jakarta Selatan</p>
+                        </div>
+                    </div>
+
+                    <!-- DANA Payment Detail -->
+                    <div id="danaDetail" class="payment-detail">
+                        <div class="ewallet-info">
+                            <h3><i class="fas fa-wallet"></i> DANA</h3>
+                            <div class="ewallet-number">
+                                0812 4613 5710
+                                <button class="copy-btn" onclick="copyToClipboard('081246135710')">Salin</button>
+                            </div>
+                            <p>Scan QR Code DANA</p>
+                            <div class="qris-code">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=DANA_IRONCOLOL_081246135710" alt="DANA QR Code">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OVO Payment Detail -->
+                    <div id="ovoDetail" class="payment-detail">
+                        <div class="ewallet-info">
+                            <h3><i class="fas fa-mobile-alt"></i> OVO</h3>
+                            <div class="ewallet-number">
+                                0812 4613 5710
+                                <button class="copy-btn" onclick="copyToClipboard('081246135710')">Salin</button>
+                            </div>
+                            <p>Scan QR Code OVO</p>
+                            <div class="qris-code">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=OVO_IRONCOLOL_081246135710" alt="OVO QR Code">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Bukti Pembayaran -->
+                    <div class="upload-proof">
+                        <i class="fas fa-upload"></i>
+                        <p>Upload Bukti Pembayaran</p>
+                        <input type="file" id="paymentProof" accept="image/*">
+                        <small>Upload screenshot atau foto bukti transfer</small>
+                    </div>
+
+                    <button class="confirm-payment" id="confirmPaymentBtn">
+                        <i class="fas fa-check-circle"></i> Konfirmasi Pembayaran
+                    </button>
+                </div>
+            </div>
         </div>
     </section>
 
-    <div id="paymentModal" class="modal">
-        <div class="modal-content">
-            <h2>Pembayaran QRIS</h2>
-            <div class="qris-container">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=QRIS_IRONCOLOL" alt="QRIS Code">
-                <p>Scan QR code untuk pembayaran</p>
-            </div>
-            <button class="btn btn-primary" id="confirmPayment">Konfirmasi Pembayaran</button>
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content" style="text-align: center; max-width: 350px;">
+            <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;"></i>
+            <h2>Pesanan Berhasil!</h2>
+            <p>Pesanan Anda telah diterima. Silahkan tunggu konfirmasi dari kasir.</p>
+            <button class="btn btn-primary" onclick="window.location.href='index.html'" style="margin-top: 1rem;">
+                Kembali ke Beranda
+            </button>
         </div>
     </div>
+
+    <div id="toast" class="toast"></div>
 
     <script src="js/cart.js"></script>
 </body>

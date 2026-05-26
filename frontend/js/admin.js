@@ -1,55 +1,52 @@
-// Simple Admin Script - No Complex Auth
-const API_URL = window.location.origin;
-
-// Hardcoded credentials
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "admin123";
-
-// Check login on page load
-function checkLogin() {
-    const isLoggedIn = localStorage.getItem('adminLoggedIn');
-    if (isLoggedIn === 'true') {
-        document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
-        loadProducts();
-        loadOrders();
-        loadTables();
-        loadQRManagement();
-    } else {
-        document.getElementById('loginModal').style.display = 'flex';
-        document.getElementById('adminPanel').style.display = 'none';
-    }
-}
+// API Configuration
+const API_URL = window.location.origin || 'http://localhost:3000';
+let adminToken = null;
 
 // Login function
-function login() {
+async function login() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        localStorage.setItem('adminLoggedIn', 'true');
-        localStorage.setItem('adminUsername', username);
-        document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('adminPanel').style.display = 'block';
-        document.getElementById('adminUsername').textContent = username;
-        showToast('Login berhasil!');
-        loadProducts();
-        loadOrders();
-        loadTables();
-        loadQRManagement();
-    } else {
-        showToast('Username atau password salah!', true);
+    try {
+        const response = await fetch(`${API_URL}/api/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            adminToken = data.token;
+            localStorage.setItem('adminToken', adminToken);
+            localStorage.setItem('adminUsername', username);
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+            document.getElementById('adminUsername').textContent = username;
+            showToast('Login berhasil!');
+            loadProducts();
+            loadOrders();
+            loadTables();
+            loadQRManagement();
+        } else {
+            showToast(data.error || 'Login gagal!', true);
+        }
+    } catch (error) {
+        showToast('Error: ' + error.message, true);
     }
 }
 
-// Logout function
+// Logout
 function logout() {
-    localStorage.removeItem('adminLoggedIn');
+    localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUsername');
+    adminToken = null;
     document.getElementById('loginModal').style.display = 'flex';
     document.getElementById('adminPanel').style.display = 'none';
     showToast('Logout berhasil');
 }
+
+// ============ PRODUCT MANAGEMENT ============
 
 // Load products
 async function loadProducts() {
@@ -58,7 +55,9 @@ async function loadProducts() {
         const products = await response.json();
         const tbody = document.getElementById('productsTableBody');
         
-        if (products.length === 0) {
+        if (!tbody) return;
+        
+        if (!products || products.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada produk</td></tr>';
             return;
         }
@@ -66,22 +65,19 @@ async function loadProducts() {
         tbody.innerHTML = products.map(product => `
             <tr>
                 <td><img src="${product.image}" class="product-image-cell" onerror="this.src='https://via.placeholder.com/50'"></td>
-                <td>${product.name}</td>
+                <td>${escapeHtml(product.name)}</td>
                 <td>${product.category}</td>
                 <td>Rp ${Number(product.price).toLocaleString()}</td>
                 <td>
-                    <button class="action-btn edit-btn" onclick="editProduct(${product.id})">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})">
-                        <i class="fas fa-trash"></i> Hapus
-                    </button>
+                    <button class="action-btn edit-btn" onclick="editProduct(${product.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})"><i class="fas fa-trash"></i> Hapus</button>
                 </td>
             </tr>
         `).join('');
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById('productsTableBody').innerHTML = '<tr><td colspan="5" class="text-center">Gagal memuat produk</td></tr>';
+        const tbody = document.getElementById('productsTableBody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center">Gagal memuat produk</td></tr>';
     }
 }
 
@@ -97,11 +93,23 @@ window.editProduct = async (id) => {
         document.getElementById('productCategory').value = product.category;
         document.getElementById('productPrice').value = product.price;
         document.getElementById('productDescription').value = product.description || '';
-        document.getElementById('productImage').value = product.image;
         
+        if (product.image) {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const previewImg = document.getElementById('imagePreview');
+            if (previewContainer && previewImg) {
+                previewImg.src = product.image;
+                previewContainer.style.display = 'block';
+            }
+        } else {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            if (previewContainer) previewContainer.style.display = 'none';
+        }
+        
+        document.getElementById('productImage').value = '';
         document.getElementById('productModal').style.display = 'flex';
     } catch (error) {
-        showToast('Error loading product', true);
+        showToast('Gagal memuat data produk: ' + error.message, true);
     }
 };
 
@@ -109,9 +117,7 @@ window.editProduct = async (id) => {
 window.deleteProduct = async (id) => {
     if (confirm('Yakin ingin menghapus produk ini?')) {
         try {
-            const response = await fetch(`${API_URL}/api/products/${id}`, {
-                method: 'DELETE'
-            });
+            const response = await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 showToast('Produk berhasil dihapus');
                 loadProducts();
@@ -124,97 +130,94 @@ window.deleteProduct = async (id) => {
     }
 };
 
-// Save product (add/edit)
-document.getElementById('productForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const id = document.getElementById('productId').value;
-    const productData = {
-        name: document.getElementById('productName').value,
-        category: document.getElementById('productCategory').value,
-        price: parseInt(document.getElementById('productPrice').value),
-        description: document.getElementById('productDescription').value,
-        image: document.getElementById('productImage').value || 'https://via.placeholder.com/300x200?text=Product'
-    };
-    
-    const url = id ? `${API_URL}/api/products/${id}` : `${API_URL}/api/products`;
-    const method = id ? 'PUT' : 'POST';
-    
-    try {
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(productData)
-        });
+// Save product
+const productForm = document.getElementById('productForm');
+if (productForm) {
+    productForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        if (response.ok) {
-            showToast(id ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan');
-            document.getElementById('productModal').style.display = 'none';
-            document.getElementById('productForm').reset();
-            document.getElementById('productId').value = '';
-            loadProducts();
-        } else {
-            showToast('Gagal menyimpan produk', true);
-        }
-    } catch (error) {
-        showToast('Error: ' + error.message, true);
-    }
-});
-
-// Load orders
-async function loadOrders() {
-    try {
-        const response = await fetch(`${API_URL}/api/orders`);
-        const orders = await response.json();
-        const ordersList = document.getElementById('ordersList');
+        const id = document.getElementById('productId').value;
+        const formData = new FormData();
+        formData.append('name', document.getElementById('productName').value);
+        formData.append('category', document.getElementById('productCategory').value);
+        formData.append('price', document.getElementById('productPrice').value);
+        formData.append('description', document.getElementById('productDescription').value);
         
-        if (orders.length === 0) {
-            ordersList.innerHTML = '<div class="text-center">Belum ada pesanan</div>';
-            return;
+        const imageFile = document.getElementById('productImage').files[0];
+        if (imageFile) {
+            formData.append('image', imageFile);
         }
         
-        ordersList.innerHTML = orders.map(order => `
-            <div class="order-card">
-                <div class="order-header">
-                    <strong>#${order.id}</strong>
-                    <span class="order-status status-${order.status}">${order.status}</span>
-                </div>
-                <div><strong>${order.customerName || 'Meja ' + (order.tableNumber || 'Customer')}</strong></div>
-                ${order.customerAddress ? `<div><small>📍 ${order.customerAddress}</small></div>` : ''}
-                <div class="order-items" style="margin: 0.5rem 0;">
-                    ${order.items?.map(item => `<div>${item.name} x${item.quantity} = Rp ${(item.price * item.quantity).toLocaleString()}</div>`).join('') || 'Tidak ada item'}
-                </div>
-                <div><strong>Total: Rp ${(order.total || 0).toLocaleString()}</strong></div>
-                <select onchange="updateOrderStatus(${order.id}, this.value)" style="margin-top: 0.5rem; padding: 0.3rem; border-radius: 5px;">
-                    <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
-                    <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Processing</option>
-                    <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
-                    <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                </select>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('ordersList').innerHTML = '<div class="text-center">Gagal memuat pesanan</div>';
-    }
+        const url = id ? `${API_URL}/api/products/${id}` : `${API_URL}/api/products`;
+        const method = id ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, { method: method, body: formData });
+            const result = await response.json();
+            
+            if (response.ok) {
+                showToast(id ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan');
+                closeProductModal();
+                loadProducts();
+            } else {
+                showToast(result.error || 'Gagal menyimpan produk', true);
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, true);
+        }
+    });
 }
 
-// Update order status
-window.updateOrderStatus = async (id, status) => {
-    try {
-        const response = await fetch(`${API_URL}/api/orders/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
-        });
-        if (response.ok) {
-            showToast('Status pesanan diupdate');
-            loadOrders();
+// Close product modal
+function closeProductModal() {
+    const modal = document.getElementById('productModal');
+    const form = document.getElementById('productForm');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const productId = document.getElementById('productId');
+    
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (productId) productId.value = '';
+}
+
+// Preview image
+const productImageInput = document.getElementById('productImage');
+if (productImageInput) {
+    productImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                const previewImg = document.getElementById('imagePreview');
+                if (previewContainer && previewImg) {
+                    previewImg.src = e.target.result;
+                    previewContainer.style.display = 'block';
+                }
+            };
+            reader.readAsDataURL(file);
         }
-    } catch (error) {
-        showToast('Error update status', true);
-    }
-};
+    });
+}
+
+// Add product button
+const addProductBtn = document.getElementById('addProductBtn');
+if (addProductBtn) {
+    addProductBtn.addEventListener('click', () => {
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> Tambah Produk';
+        const form = document.getElementById('productForm');
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const productId = document.getElementById('productId');
+        
+        if (form) form.reset();
+        if (productId) productId.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+        document.getElementById('productModal').style.display = 'flex';
+    });
+}
+
+// ============ TABLE MANAGEMENT ============
 
 // Load tables
 async function loadTables() {
@@ -223,20 +226,184 @@ async function loadTables() {
         const tables = await response.json();
         const tablesGrid = document.getElementById('tablesGrid');
         
+        if (!tablesGrid) return;
+        
+        if (!tables || tables.length === 0) {
+            tablesGrid.innerHTML = '<div class="text-center">Belum ada meja. Klik "Tambah Meja" untuk menambahkan.</div>';
+            return;
+        }
+        
         tablesGrid.innerHTML = tables.map(table => `
             <div class="table-card">
                 <i class="fas fa-chair"></i>
-                <h3>Meja ${table.number || table.id}</h3>
-                <div class="${table.status === 'available' ? 'status-available' : 'status-occupied'}">
+                <h3>Meja ${table.number}</h3>
+                <div class="table-status ${table.status === 'available' ? 'status-available' : 'status-occupied'}">
                     ${table.status === 'available' ? '✅ Tersedia' : '🔴 Terisi'}
+                </div>
+                <div style="display: flex; gap: 0.3rem; justify-content: center; margin-top: 0.5rem;">
+                    <button class="action-btn edit-btn" onclick="editTable(${table.id}, ${table.number}, '${table.status}')" style="padding: 0.2rem 0.5rem;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deleteTable(${table.id})" style="padding: 0.2rem 0.5rem;">
+                        <i class="fas fa-trash"></i> Hapus
+                    </button>
                 </div>
             </div>
         `).join('');
     } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('tablesGrid').innerHTML = '<div class="text-center">Gagal memuat meja</div>';
+        console.error('Error loading tables:', error);
+        const tablesGrid = document.getElementById('tablesGrid');
+        if (tablesGrid) tablesGrid.innerHTML = '<div class="text-center">Gagal memuat meja</div>';
     }
 }
+
+// Edit table status - FIXED
+window.editTable = async (id, number, currentStatus) => {
+    if (!adminToken) {
+        showToast('Silakan login terlebih dahulu!', true);
+        return;
+    }
+    
+    const newStatus = prompt(`Ubah status meja ${number} (available/occupied):`, currentStatus);
+    if (newStatus && (newStatus === 'available' || newStatus === 'occupied')) {
+        try {
+            const response = await fetch(`${API_URL}/api/admin/tables/${id}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': adminToken
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                showToast(`Status meja ${number} diupdate menjadi ${newStatus === 'available' ? 'Tersedia' : 'Terisi'}`);
+                loadTables();
+                loadQRManagement();
+            } else {
+                showToast(data.error || 'Gagal update status', true);
+            }
+        } catch (error) {
+            console.error('Error updating table:', error);
+            showToast('Error: ' + error.message, true);
+        }
+    }
+};
+
+// Delete table - FIXED
+window.deleteTable = async (id) => {
+    if (!adminToken) {
+        showToast('Silakan login terlebih dahulu!', true);
+        return;
+    }
+    
+    if (confirm('Yakin ingin menghapus meja ini? Menghapus meja akan menghilangkan QR code terkait.')) {
+        try {
+            const response = await fetch(`${API_URL}/api/admin/tables/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': adminToken }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                showToast('Meja berhasil dihapus');
+                loadTables();
+                loadQRManagement();
+            } else {
+                showToast(data.error || 'Gagal menghapus meja', true);
+            }
+        } catch (error) {
+            console.error('Error deleting table:', error);
+            showToast('Error: ' + error.message, true);
+        }
+    }
+};
+
+// Add new table - FIXED
+async function addTable(tableNumber, status) {
+    if (!adminToken) {
+        showToast('Silakan login terlebih dahulu!', true);
+        return;
+    }
+    
+    if (!tableNumber || tableNumber <= 0) {
+        showToast('Nomor meja tidak valid!', true);
+        return;
+    }
+    
+    try {
+        showToast('Menyimpan data meja...');
+        
+        const response = await fetch(`${API_URL}/api/admin/tables`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': adminToken
+            },
+            body: JSON.stringify({ 
+                number: parseInt(tableNumber), 
+                status: status 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showToast(`Meja ${tableNumber} berhasil ditambahkan!`);
+            closeAddTableModal();
+            loadTables();
+            loadQRManagement();
+        } else {
+            showToast(data.error || 'Gagal menambah meja', true);
+        }
+    } catch (error) {
+        console.error('Error adding table:', error);
+        showToast('Error: ' + error.message, true);
+    }
+}
+
+// Close add table modal - FIXED
+function closeAddTableModal() {
+    const modal = document.getElementById('addTableModal');
+    const form = document.getElementById('addTableForm');
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+}
+
+// Add table button - FIXED
+const addTableBtn = document.getElementById('addTableBtn');
+if (addTableBtn) {
+    addTableBtn.addEventListener('click', () => {
+        if (!adminToken) {
+            showToast('Silakan login terlebih dahulu!', true);
+            return;
+        }
+        const modal = document.getElementById('addTableModal');
+        if (modal) modal.style.display = 'flex';
+    });
+}
+
+// Add table form submit - FIXED
+const addTableForm = document.getElementById('addTableForm');
+if (addTableForm) {
+    addTableForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const tableNumber = document.getElementById('tableNumber').value;
+        const tableStatus = document.getElementById('tableStatus').value;
+        
+        if (!tableNumber) {
+            showToast('Nomor meja harus diisi!', true);
+            return;
+        }
+        
+        addTable(tableNumber, tableStatus);
+    });
+}
+
+// ============ QR CODE MANAGEMENT ============
 
 // Load QR Management
 async function loadQRManagement() {
@@ -245,29 +412,44 @@ async function loadQRManagement() {
         const tables = await response.json();
         const grid = document.getElementById('qrManagementGrid');
         
+        if (!grid) return;
+        
+        if (!tables || tables.length === 0) {
+            grid.innerHTML = '<div class="text-center">Belum ada meja. Tambahkan meja terlebih dahulu.</div>';
+            return;
+        }
+        
         grid.innerHTML = tables.map(table => {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${API_URL}/menu.html?table=${table.number || table.id}`;
+            const qrData = `${API_URL}/menu.html?table=${table.number}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrData)}`;
+            
             return `
-                <div class="qr-admin-card">
-                    <h3><i class="fas fa-chair"></i> Meja ${table.number || table.id}</h3>
-                    <div class="qr-preview">
-                        <img src="${qrUrl}" alt="QR Meja ${table.number || table.id}">
-                        <p><small>${API_URL}/menu.html?table=${table.number || table.id}</small></p>
+                <div class="qr-card" id="qr-card-${table.id}">
+                    <span class="table-number-badge">Meja ${table.number}</span>
+                    <div>
+                        <img src="${qrUrl}" alt="QR Code Meja ${table.number}" id="qr-img-${table.id}">
                     </div>
-                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                        <button class="action-btn edit-btn" onclick="downloadQR('${qrUrl}', ${table.number || table.id})">
+                    <div class="qr-actions">
+                        <button class="action-btn edit-btn" onclick="downloadQR('${qrUrl}', ${table.number})">
                             <i class="fas fa-download"></i> Download
                         </button>
-                        <button class="action-btn edit-btn" onclick="printQR(${table.number || table.id})">
+                        <button class="action-btn edit-btn" onclick="printQR(${table.number})">
                             <i class="fas fa-print"></i> Print
                         </button>
+                        <button class="action-btn edit-btn" onclick="regenerateQR(${table.id}, ${table.number})">
+                            <i class="fas fa-sync"></i> Regenerate
+                        </button>
+                    </div>
+                    <div style="margin-top: 0.5rem; font-size: 10px; color: #666; word-break: break-all;">
+                        <small>${qrData}</small>
                     </div>
                 </div>
             `;
         }).join('');
     } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('qrManagementGrid').innerHTML = '<div class="text-center">Gagal memuat QR</div>';
+        console.error('Error loading QR:', error);
+        const grid = document.getElementById('qrManagementGrid');
+        if (grid) grid.innerHTML = '<div class="text-center">Gagal memuat QR</div>';
     }
 }
 
@@ -285,30 +467,198 @@ window.printQR = (tableNumber) => {
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${API_URL}/menu.html?table=${tableNumber}`;
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
-        <html>
-        <head><title>QR Code Meja ${tableNumber}</title></head>
-        <body style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial;">
-            <div style="text-align: center;">
-                <h1>Cafe IronColol</h1>
-                <h2>Meja ${tableNumber}</h2>
-                <img src="${qrUrl}" style="width: 250px; height: 250px;">
-                <p>Scan QR code untuk memesan</p>
-                <small>${API_URL}/menu.html?table=${tableNumber}</small>
-            </div>
+        <html><head><title>QR Meja ${tableNumber}</title>
+        <style>
+            body { text-align:center; padding:50px; font-family: Arial; }
+            .qr-code img { width: 250px; height: 250px; border: 1px solid #ddd; padding: 10px; border-radius: 10px; }
+            .meja-number { font-size: 24px; font-weight: bold; margin: 10px 0; color: #667eea; }
+        </style>
+        </head>
+        <body>
+            <h1>☕ Cafe IronColol</h1>
+            <div class="meja-number">MEJA ${tableNumber}</div>
+            <div class="qr-code"><img src="${qrUrl}" alt="QR Code Meja ${tableNumber}"></div>
+            <p>Scan QR code ini untuk memesan dari meja ${tableNumber}</p>
+            <p><small>${API_URL}/menu.html?table=${tableNumber}</small></p>
             <script>window.print(); setTimeout(() => window.close(), 500);<\/script>
-        </body>
-        </html>
+        </body></html>
     `);
     printWindow.document.close();
 };
 
-// Generate all QR
-document.getElementById('generateAllQRBtn')?.addEventListener('click', () => {
-    showToast('Generate QR untuk semua meja');
-    loadQRManagement();
-});
+// Regenerate QR
+window.regenerateQR = async (tableId, tableNumber) => {
+    try {
+        const qrData = `${API_URL}/menu.html?table=${tableNumber}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrData)}`;
+        
+        const qrImg = document.getElementById(`qr-img-${tableId}`);
+        if (qrImg) {
+            qrImg.src = qrUrl;
+        }
+        
+        showToast(`QR Code Meja ${tableNumber} diregenerasi!`);
+        
+        await fetch(`${API_URL}/api/admin/tables/${tableId}/qr`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': adminToken
+            },
+            body: JSON.stringify({ qrCode: qrData, qrCodeUrl: qrUrl })
+        });
+    } catch (error) {
+        showToast('Error: ' + error.message, true);
+    }
+};
 
-// Tab navigation
+// Generate all QR
+const generateAllQRBtn = document.getElementById('generateAllQRBtn');
+if (generateAllQRBtn) {
+    generateAllQRBtn.addEventListener('click', () => {
+        showToast('QR Code untuk semua meja diregenerasi');
+        loadQRManagement();
+    });
+}
+
+// ============ ORDER MANAGEMENT ============
+
+// Print receipt function
+function printReceipt(order) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('id-ID');
+    const timeStr = now.toLocaleTimeString('id-ID');
+    
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    
+    const receiptHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Struk Pesanan #${order.id}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 12px; padding: 20px; background: white; }
+        .receipt { width: 280px; margin: 0 auto; }
+        .receipt-header { text-align: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #000; }
+        .receipt-header h2 { font-size: 18px; }
+        .receipt-divider { border-top: 1px dashed #000; margin: 8px 0; }
+        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .receipt-total { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000; font-weight: bold; }
+        .receipt-footer { text-align: center; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; font-size: 10px; }
+        .qr-code { text-align: center; margin: 10px 0; }
+        .qr-code img { width: 80px; height: 80px; }
+        @media print { body { padding: 0; margin: 0; } }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="receipt-header">
+            <h2>☕ IRONCOLOL CAFE</h2>
+            <p>Jl. Contoh No. 123, Jakarta</p>
+            <p>Telp: (021) 1234-5678</p>
+            <div class="receipt-divider"></div>
+            <p>${dateStr} | ${timeStr}</p>
+            <p>Kasir: Admin</p>
+        </div>
+        <div class="receipt-body">
+            <div class="receipt-row"><span>No. Order:</span><span>#${order.id}</span></div>
+            <div class="receipt-row"><span>Pelanggan:</span><span>${order.customerName || 'Walk-in Customer'}</span></div>
+            ${order.tableNumber ? `<div class="receipt-row"><span>Meja:</span><span>${order.tableNumber}</span></div>` : ''}
+            <div class="receipt-divider"></div>
+            ${order.items ? order.items.map(item => `<div class="receipt-row"><span>${item.name} x ${item.quantity}</span><span>Rp ${(item.price * item.quantity).toLocaleString()}</span></div>`).join('') : ''}
+            <div class="receipt-divider"></div>
+            <div class="receipt-row receipt-total"><span>TOTAL</span><span>Rp ${(order.total || 0).toLocaleString()}</span></div>
+            ${order.paymentMethod ? `<div class="receipt-row"><span>Metode Bayar</span><span>${order.paymentMethod.toUpperCase()}</span></div>` : ''}
+            ${order.tableNumber ? `<div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${API_URL}/menu.html?table=${order.tableNumber}"></div>` : ''}
+        </div>
+        <div class="receipt-footer">
+            <p>Terima kasih telah berkunjung!</p>
+            <p>⭐ Follow IG @ironcolol_cafe ⭐</p>
+        </div>
+    </div>
+    <script>window.onload = function() { window.print(); setTimeout(() => window.close(), 500); };</script>
+</body>
+</html>
+    `;
+    
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+}
+
+// Load orders
+async function loadOrders() {
+    try {
+        const response = await fetch(`${API_URL}/api/orders`);
+        const orders = await response.json();
+        const ordersList = document.getElementById('ordersList');
+        
+        if (!ordersList) return;
+        
+        if (!orders || orders.length === 0) {
+            ordersList.innerHTML = '<div class="text-center">Belum ada pesanan</div>';
+            return;
+        }
+        
+        ordersList.innerHTML = orders.map(order => `
+            <div class="order-card">
+                <div class="order-header">
+                    <strong>#${order.id}</strong>
+                    <span class="order-status status-${order.status}">${order.status}</span>
+                </div>
+                <div><strong>${order.customerName || 'Meja ' + (order.tableNumber || 'Customer')}</strong></div>
+                ${order.items ? `<div>${order.items.map(item => `${item.name} x${item.quantity}`).join(', ')}</div>` : ''}
+                <div><strong>Total: Rp ${(order.total || 0).toLocaleString()}</strong></div>
+                <div class="order-actions">
+                    <select onchange="updateOrderStatus(${order.id}, this.value)" style="flex:1; padding:0.3rem; border-radius:5px;">
+                        <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Processing</option>
+                        <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                    <button class="print-receipt-btn" onclick='printReceipt(${JSON.stringify(order).replace(/'/g, "\\'")})'>
+                        <i class="fas fa-print"></i> Cetak Struk
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading orders:', error);
+        const ordersList = document.getElementById('ordersList');
+        if (ordersList) ordersList.innerHTML = '<div class="text-center">Gagal memuat pesanan</div>';
+    }
+}
+
+// Update order status
+window.updateOrderStatus = async (id, status) => {
+    try {
+        const response = await fetch(`${API_URL}/api/orders/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        
+        if (response.ok) {
+            showToast(`Status pesanan #${id} diupdate menjadi ${status}`);
+            await loadOrders();
+            
+            if (status === 'completed') {
+                const orderResponse = await fetch(`${API_URL}/api/orders/${id}`);
+                const order = await orderResponse.json();
+                if (confirm(`Pesanan #${id} sudah selesai. Cetak struk sekarang?`)) {
+                    printReceipt(order);
+                }
+            }
+        } else {
+            showToast('Gagal update status', true);
+        }
+    } catch (error) {
+        showToast('Error: ' + error.message, true);
+    }
+};
+
+// ============ TAB NAVIGATION ============
 const navBtns = document.querySelectorAll('.admin-nav-btn');
 const tabs = ['products', 'orders', 'tables', 'qrcode'];
 
@@ -324,7 +674,6 @@ navBtns.forEach(btn => {
         const activeTab = document.getElementById(`${tabId}Tab`);
         if (activeTab) activeTab.style.display = 'block';
         
-        // Refresh data
         if (tabId === 'products') loadProducts();
         else if (tabId === 'orders') loadOrders();
         else if (tabId === 'tables') loadTables();
@@ -332,37 +681,68 @@ navBtns.forEach(btn => {
     });
 });
 
-// Modal close
+// Modal close buttons - FIXED
 document.querySelectorAll('.close').forEach(closeBtn => {
     closeBtn.onclick = () => {
-        document.getElementById('productModal').style.display = 'none';
+        closeProductModal();
+        closeAddTableModal();
     };
 });
 
-// Add product button
-document.getElementById('addProductBtn')?.addEventListener('click', () => {
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> Tambah Produk';
-    document.getElementById('productForm').reset();
-    document.getElementById('productId').value = '';
-    document.getElementById('productModal').style.display = 'flex';
-});
-
 // Login form
-document.getElementById('loginForm')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    login();
-});
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        login();
+    });
+}
 
 // Logout button
-document.getElementById('logoutBtn')?.addEventListener('click', logout);
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', logout);
+}
 
-// Show toast
+// Helper functions
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');
+    if (!toast) return;
     toast.textContent = message;
-    toast.style.backgroundColor = isError ? '#ef4444' : '#1a1a2e';
+    toast.style.background = isError ? '#ef4444' : '#1a1a2e';
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Check login status
+function checkLogin() {
+    const savedToken = localStorage.getItem('adminToken');
+    const savedUsername = localStorage.getItem('adminUsername');
+    if (savedToken && savedUsername) {
+        adminToken = savedToken;
+        const loginModal = document.getElementById('loginModal');
+        const adminPanel = document.getElementById('adminPanel');
+        const adminUsername = document.getElementById('adminUsername');
+        
+        if (loginModal) loginModal.style.display = 'none';
+        if (adminPanel) adminPanel.style.display = 'block';
+        if (adminUsername) adminUsername.textContent = savedUsername;
+        
+        loadProducts();
+        loadOrders();
+        loadTables();
+        loadQRManagement();
+    }
 }
 
 // Initialize

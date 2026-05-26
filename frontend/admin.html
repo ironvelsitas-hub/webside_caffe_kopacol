@@ -8,7 +8,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Additional admin styles */
         .admin-container {
             display: flex;
             min-height: 100vh;
@@ -27,14 +26,8 @@
             padding-bottom: 1rem;
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .admin-logo i {
-            font-size: 1.8rem;
-            color: #667eea;
-        }
-        .admin-logo h2 {
-            font-size: 1.2rem;
-            margin: 0;
-        }
+        .admin-logo i { font-size: 1.8rem; color: #667eea; }
+        .admin-logo h2 { font-size: 1.2rem; margin: 0; }
         .admin-user {
             display: flex;
             align-items: center;
@@ -68,10 +61,6 @@
             display: flex;
             align-items: center;
             gap: 0.8rem;
-            font-size: 0.95rem;
-        }
-        .admin-nav-btn i {
-            width: 1.5rem;
         }
         .admin-nav-btn:hover,
         .admin-nav-btn.active {
@@ -91,9 +80,24 @@
             flex-wrap: wrap;
             gap: 1rem;
         }
-        .admin-header h2 {
-            margin: 0;
-            font-size: 1.5rem;
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
         }
         .products-table {
             background: white;
@@ -115,7 +119,6 @@
         .products-table th {
             background: #f8f9fa;
             font-weight: 600;
-            color: #333;
         }
         .product-image-cell {
             width: 50px;
@@ -129,27 +132,9 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.85rem;
         }
-        .edit-btn {
-            background: #667eea;
-            color: white;
-        }
-        .delete-btn {
-            background: #ef4444;
-            color: white;
-        }
-        .btn-primary {
-            background: #667eea;
-            color: white;
-            padding: 0.6rem 1.2rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+        .edit-btn { background: #667eea; color: white; }
+        .delete-btn { background: #ef4444; color: white; }
         .modal {
             display: none;
             position: fixed;
@@ -193,6 +178,17 @@
             border: 1px solid #ddd;
             border-radius: 8px;
         }
+        .image-preview {
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        .image-preview img {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
         .toast {
             position: fixed;
             bottom: 2rem;
@@ -204,11 +200,124 @@
             z-index: 2000;
             display: none;
         }
-        .toast.show {
-            display: block;
+        .toast.show { display: block; }
+        .text-center { text-align: center; }
+        
+        /* Style untuk QR Management */
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
         }
-        .text-center {
+        .qr-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
             text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .qr-card:hover {
+            transform: translateY(-5px);
+        }
+        .qr-card img {
+            width: 180px;
+            height: 180px;
+            margin: 0.5rem auto;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .table-number-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+        .qr-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+        
+        /* Style untuk Tables Grid */
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            text-align: center;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .table-card:hover {
+            transform: translateY(-5px);
+        }
+        .table-card i {
+            font-size: 2rem;
+            color: #667eea;
+        }
+        .table-card h3 {
+            margin: 0.5rem 0;
+        }
+        .table-status {
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+        .status-available { color: #10b981; }
+        .status-occupied { color: #ef4444; }
+        
+        /* Style untuk struk print */
+        .receipt {
+            font-family: 'Courier New', monospace;
+            width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            font-size: 12px;
+        }
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #000;
+        }
+        .receipt-header h2 {
+            font-size: 18px;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+        }
+        .receipt-header p {
+            margin: 5px 0;
+            font-size: 10px;
+        }
+        .receipt-body {
+            margin-bottom: 15px;
+        }
+        .receipt-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .receipt-total {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+            font-weight: bold;
+        }
+        .receipt-footer {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+            font-size: 10px;
         }
         .order-card {
             background: white;
@@ -221,6 +330,7 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.8rem;
+            flex-wrap: wrap;
         }
         .order-status {
             padding: 0.2rem 0.8rem;
@@ -231,48 +341,41 @@
         .status-processing { background: #dbeafe; color: #2563eb; }
         .status-completed { background: #d1fae5; color: #059669; }
         .status-cancelled { background: #fee2e2; color: #dc2626; }
-        .tables-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem;
+        .order-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
         }
-        .table-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1rem;
-            text-align: center;
+        .print-receipt-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
         }
-        .table-card i {
-            font-size: 2rem;
-            color: #667eea;
-        }
-        .status-available { color: #10b981; }
-        .status-occupied { color: #ef4444; }
-        .qr-admin-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-        .qr-preview {
-            text-align: center;
-            padding: 1rem;
-        }
-        .qr-preview img {
-            width: 150px;
-            height: 150px;
-        }
-        @media (max-width: 768px) {
-            .admin-container {
-                flex-direction: column;
+        @media print {
+            body * {
+                visibility: hidden;
             }
-            .admin-sidebar {
+            .receipt-print-area, .receipt-print-area * {
+                visibility: visible;
+            }
+            .receipt-print-area {
+                position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
+                margin: 0;
+                padding: 20px;
             }
-            .admin-nav {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
+        }
+        
+        @media (max-width: 768px) {
+            .admin-container { flex-direction: column; }
+            .admin-sidebar { width: 100%; }
+            .qr-grid { grid-template-columns: 1fr; }
+            .tables-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
         }
     </style>
 </head>
@@ -280,21 +383,17 @@
     <!-- Login Modal -->
     <div id="loginModal" class="modal" style="display: flex;">
         <div class="modal-content">
-            <h2 style="text-align: center; margin-bottom: 1.5rem;">
-                <i class="fas fa-lock"></i> Admin Login
-            </h2>
+            <h2 style="text-align: center;"><i class="fas fa-lock"></i> Admin Login</h2>
             <form id="loginForm">
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="username" required placeholder="admin" autocomplete="off">
+                    <input type="text" id="username" required placeholder="admin">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <input type="password" id="password" required placeholder="admin123">
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </button>
+                <button type="submit" class="btn-primary" style="width:100%">Login</button>
             </form>
         </div>
     </div>
@@ -309,23 +408,13 @@
                 </div>
                 <div class="admin-user">
                     <span><i class="fas fa-user-circle"></i> <span id="adminUsername">Admin</span></span>
-                    <button id="logoutBtn" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
+                    <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
                 <nav class="admin-nav">
-                    <button class="admin-nav-btn active" data-tab="products">
-                        <i class="fas fa-utensils"></i> Produk
-                    </button>
-                    <button class="admin-nav-btn" data-tab="orders">
-                        <i class="fas fa-shopping-cart"></i> Pesanan
-                    </button>
-                    <button class="admin-nav-btn" data-tab="tables">
-                        <i class="fas fa-chair"></i> Meja
-                    </button>
-                    <button class="admin-nav-btn" data-tab="qrcode">
-                        <i class="fas fa-qrcode"></i> QR Code Meja
-                    </button>
+                    <button class="admin-nav-btn active" data-tab="products"><i class="fas fa-utensils"></i> Produk</button>
+                    <button class="admin-nav-btn" data-tab="orders"><i class="fas fa-shopping-cart"></i> Pesanan</button>
+                    <button class="admin-nav-btn" data-tab="tables"><i class="fas fa-chair"></i> Meja</button>
+                    <button class="admin-nav-btn" data-tab="qrcode"><i class="fas fa-qrcode"></i> QR Code Meja</button>
                 </nav>
             </aside>
 
@@ -333,71 +422,79 @@
                 <!-- Products Tab -->
                 <div id="productsTab" class="admin-tab active">
                     <div class="admin-header">
-                        <h2><i class="fas fa-utensils"></i> Katalog Produk</h2>
-                        <button class="btn-primary" id="addProductBtn">
-                            <i class="fas fa-plus"></i> Tambah Produk
-                        </button>
+                        <h2><i class="fas fa-utensils"></i> Kelola Produk</h2>
+                        <button class="btn-primary" id="addProductBtn"><i class="fas fa-plus"></i> Tambah Produk</button>
                     </div>
                     <div class="products-table">
                         <table>
                             <thead>
-                                <tr>
-                                    <th>Gambar</th>
-                                    <th>Nama</th>
-                                    <th>Kategori</th>
-                                    <th>Harga</th>
-                                    <th>Aksi</th>
-                                </tr>
+                                <tr><th>Gambar</th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Aksi</th></tr>
                             </thead>
-                            <tbody id="productsTableBody">
-                                <tr><td colspan="5" class="text-center">Loading...</td><tr>
-                            </tbody>
+                            <tbody id="productsTableBody"><tr><td colspan="5" class="text-center">Loading...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
-
+                
                 <!-- Orders Tab -->
                 <div id="ordersTab" class="admin-tab">
                     <div class="admin-header">
                         <h2><i class="fas fa-shopping-cart"></i> Daftar Pesanan</h2>
                     </div>
-                    <div id="ordersList" class="orders-list">
-                        <div class="text-center">Loading...</div>
-                    </div>
+                    <div id="ordersList" class="orders-list">Loading...</div>
                 </div>
-
+                
                 <!-- Tables Tab -->
                 <div id="tablesTab" class="admin-tab">
                     <div class="admin-header">
-                        <h2><i class="fas fa-chair"></i> Status Meja</h2>
+                        <h2><i class="fas fa-chair"></i> Manajemen Meja</h2>
+                        <button class="btn-primary btn-success" id="addTableBtn"><i class="fas fa-plus"></i> Tambah Meja</button>
                     </div>
-                    <div id="tablesGrid" class="tables-grid">
-                        <div class="text-center">Loading...</div>
-                    </div>
+                    <div id="tablesGrid" class="tables-grid">Loading...</div>
                 </div>
-
+                
                 <!-- QR Code Tab -->
                 <div id="qrcodeTab" class="admin-tab">
                     <div class="admin-header">
-                        <h2><i class="fas fa-qrcode"></i> Manajemen QR Code</h2>
-                        <button class="btn-primary" id="generateAllQRBtn">
-                            <i class="fas fa-qrcode"></i> Generate Semua QR
-                        </button>
+                        <h2><i class="fas fa-qrcode"></i> QR Code Meja</h2>
+                        <button class="btn-primary" id="generateAllQRBtn"><i class="fas fa-qrcode"></i> Generate Semua QR</button>
                     </div>
-                    <div id="qrManagementGrid" class="qr-management-grid">
-                        <div class="text-center">Loading...</div>
-                    </div>
+                    <div id="qrManagementGrid" class="qr-grid">Loading...</div>
                 </div>
             </main>
         </div>
     </div>
+
+    <!-- Modal Tambah Meja -->
+    <div id="addTableModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2><i class="fas fa-chair"></i> Tambah Meja Baru</h2>
+            <form id="addTableForm">
+                <div class="form-group">
+                    <label>Nomor Meja</label>
+                    <input type="number" id="tableNumber" required placeholder="Contoh: 11" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Status Meja</label>
+                    <select id="tableStatus">
+                        <option value="available">Tersedia</option>
+                        <option value="occupied">Terisi</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%"><i class="fas fa-save"></i> Simpan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden div untuk print struk -->
+    <div id="receiptPrintArea" style="display: none;"></div>
 
     <!-- Product Modal -->
     <div id="productModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2 id="modalTitle">Tambah Produk</h2>
-            <form id="productForm">
+            <form id="productForm" enctype="multipart/form-data">
                 <input type="hidden" id="productId">
                 <div class="form-group">
                     <label>Nama Produk</label>
@@ -420,10 +517,13 @@
                     <textarea id="productDescription" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Gambar URL</label>
-                    <input type="text" id="productImage" placeholder="https://...">
+                    <label>Gambar Produk</label>
+                    <input type="file" id="productImage" accept="image/*">
+                    <div class="image-preview" id="imagePreviewContainer" style="display:none;">
+                        <img id="imagePreview" src="">
+                    </div>
                 </div>
-                <button type="submit" class="btn-primary" style="width: 100%;">Simpan</button>
+                <button type="submit" class="btn-primary" style="width:100%"><i class="fas fa-save"></i> Simpan</button>
             </form>
         </div>
     </div>
