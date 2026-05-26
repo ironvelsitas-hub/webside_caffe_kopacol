@@ -2,11 +2,53 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pesan Antar - Cafe IronColol</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .order-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .order-info, .order-cart {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .order-info h2, .order-cart h2 {
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+        .cart-item-order {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        .cart-total-order {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid #667eea;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-align: right;
+        }
+        .empty-cart {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+        @media (max-width: 768px) {
+            .order-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -25,48 +67,113 @@
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count">0</span>
                 </a>
+                <div class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </div>
             </div>
         </div>
     </nav>
 
-    <section class="order-page">
+    <section class="order-page" style="padding: 100px 1rem 3rem;">
         <div class="container">
+            <h1 style="text-align: center; margin-bottom: 2rem;">Pesan Antar</h1>
+            
             <div class="order-container">
+                <!-- Form Informasi Customer -->
                 <div class="order-info">
-                    <h1>Pesan Antar</h1>
-                    <p>Isi form di bawah untuk pemesanan antar</p>
+                    <h2><i class="fas fa-user"></i> Informasi Pemesan</h2>
                     <form id="deliveryForm">
                         <div class="form-group">
-                            <label>Nama Lengkap</label>
-                            <input type="text" id="customerName" required>
+                            <label>Nama Lengkap *</label>
+                            <input type="text" id="customerName" required placeholder="Masukkan nama lengkap">
                         </div>
                         <div class="form-group">
-                            <label>Nomor Telepon</label>
-                            <input type="tel" id="customerPhone" required>
+                            <label>Nomor Telepon *</label>
+                            <input type="tel" id="customerPhone" required placeholder="081234567890">
                         </div>
                         <div class="form-group">
-                            <label>Alamat Lengkap</label>
-                            <textarea id="customerAddress" rows="3" required></textarea>
+                            <label>Alamat Lengkap *</label>
+                            <textarea id="customerAddress" rows="3" required placeholder="Masukkan alamat lengkap"></textarea>
                         </div>
                         <div class="form-group">
                             <label>Catatan (opsional)</label>
-                            <textarea id="orderNote" rows="2"></textarea>
+                            <textarea id="orderNote" rows="2" placeholder="Catatan untuk pesanan"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Lanjutkan ke Keranjang</button>
                     </form>
                 </div>
+
+                <!-- Ringkasan Pesanan -->
                 <div class="order-cart">
-                    <h3>Ringkasan Pesanan</h3>
-                    <div id="cartItems"></div>
-                    <div class="cart-total">
-                        <span>Total:</span>
-                        <span id="cartTotal">Rp 0</span>
+                    <h2><i class="fas fa-shopping-cart"></i> Ringkasan Pesanan</h2>
+                    <div id="cartItemsList">
+                        <div class="empty-cart">
+                            <i class="fas fa-shopping-cart"></i>
+                            <p>Keranjang masih kosong</p>
+                            <a href="menu.html" class="btn btn-primary" style="margin-top: 1rem;">Pesan Sekarang</a>
+                        </div>
+                    </div>
+                    <div id="cartSummary" style="display: none;">
+                        <div id="cartItems"></div>
+                        <div class="cart-total-order">
+                            <span>Total: </span>
+                            <span id="cartTotal">Rp 0</span>
+                        </div>
+                        <button class="btn btn-primary" id="proceedToPaymentBtn" style="width: 100%; margin-top: 1rem;">
+                            <i class="fas fa-credit-card"></i> Lanjut ke Pembayaran
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <script src="js/cart.js"></script>
+    <!-- Modal Pembayaran -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-payment">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-credit-card"></i> Metode Pembayaran
+            </h2>
+            
+            <div class="payment-methods" style="display: grid; gap: 1rem;">
+                <button class="payment-option-btn" data-method="transfer" style="padding: 1rem; background: #667eea; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                    <i class="fas fa-university"></i> Transfer Bank (BCA/BRI)
+                </button>
+                <button class="payment-option-btn" data-method="qris" style="padding: 1rem; background: #10b981; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                    <i class="fas fa-qrcode"></i> QRIS
+                </button>
+                <button class="payment-option-btn" data-method="cod" style="padding: 1rem; background: #f59e0b; color: white; border: none; border-radius: 10px; cursor: pointer;">
+                    <i class="fas fa-money-bill-wave"></i> Bayar di Tempat (COD)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detail Pembayaran -->
+    <div id="paymentDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <span class="close-detail">&times;</span>
+            <div id="paymentDetailContent"></div>
+            <button id="confirmPaymentDetailBtn" class="btn btn-primary" style="width:100%; margin-top:1rem;">
+                <i class="fas fa-check-circle"></i> Konfirmasi Pesanan
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Sukses -->
+    <div id="successModal" class="modal">
+        <div class="modal-content" style="text-align: center; max-width: 350px;">
+            <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;"></i>
+            <h2>Pesanan Berhasil!</h2>
+            <p>Pesanan Anda telah diterima. Silahkan tunggu konfirmasi dari kasir.</p>
+            <button class="btn btn-primary" onclick="window.location.href='index.html'" style="margin-top: 1rem;">
+                Kembali ke Beranda
+            </button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/order.js"></script>
 </body>
 </html>

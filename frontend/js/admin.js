@@ -60,7 +60,7 @@ async function loadProducts() {
     }
     
     // Tampilkan loading
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...</td><\/tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...<\/td><\/tr>';
     
     try {
         console.log('Fetching products from:', `${API_URL}/api/products`);
@@ -74,7 +74,7 @@ async function loadProducts() {
         console.log('Products loaded:', products);
         
         if (!products || products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada produk. Klik "Tambah Produk" untuk menambahkan.</td><\/tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada produk. Klik "Tambah Produk" untuk menambahkan.<\/td><\/tr>';
             return;
         }
         
@@ -705,7 +705,7 @@ function printReceipt(order) {
     printWindow.document.close();
 }
 
-// Load orders
+// Load orders - Enhanced with payment status
 async function loadOrders() {
     try {
         const response = await fetch(`${API_URL}/api/orders`);
@@ -723,10 +723,18 @@ async function loadOrders() {
             <div class="order-card">
                 <div class="order-header">
                     <strong>#${order.id}</strong>
-                    <span class="order-status status-${order.status}">${order.status}</span>
+                    <div>
+                        <span class="order-status status-${order.status}">${order.status}</span>
+                        ${order.type === 'delivery' ? '<span style="background:#667eea; color:white; padding:2px 8px; border-radius:20px; margin-left:5px; font-size:10px;">🚚 Antar</span>' : '<span style="background:#10b981; color:white; padding:2px 8px; border-radius:20px; margin-left:5px; font-size:10px;">🏠 Dine In</span>'}
+                    </div>
                 </div>
                 <div><strong>${order.customerName || 'Meja ' + (order.tableNumber || 'Customer')}</strong></div>
-                ${order.items ? `<div>${order.items.map(item => `${item.name} x${item.quantity}`).join(', ')}</div>` : ''}
+                ${order.customerAddress ? `<div><small>📍 ${order.customerAddress}</small></div>` : ''}
+                ${order.paymentMethod ? `<div><small>💳 ${order.paymentMethod}</small></div>` : ''}
+                ${order.paymentStatus ? `<div><small>💰 Status: ${order.paymentStatus === 'paid' ? '✅ Lunas' : (order.paymentStatus === 'pending_cod' ? '⏳ COD Pending' : '🔄 Menunggu Konfirmasi')}</small></div>` : ''}
+                <div class="order-items" style="margin: 0.5rem 0;">
+                    ${order.items ? order.items.map(item => `<div>${item.name} x${item.quantity} = Rp ${(item.price * item.quantity).toLocaleString()}</div>`).join('') : 'Tidak ada item'}
+                </div>
                 <div><strong>Total: Rp ${(order.total || 0).toLocaleString()}</strong></div>
                 <div class="order-actions">
                     <select onchange="updateOrderStatus(${order.id}, this.value)" style="flex:1; padding:0.3rem; border-radius:5px;">
@@ -735,9 +743,16 @@ async function loadOrders() {
                         <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
                         <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
                     </select>
-                    <button class="print-receipt-btn" onclick='printReceipt(${JSON.stringify(order).replace(/'/g, "\\'")})'>
-                        <i class="fas fa-print"></i> Cetak Struk
-                    </button>
+                    ${order.paymentMethod !== 'COD (Bayar di Tempat)' && order.paymentStatus !== 'paid' ? `
+                        <button class="action-btn edit-btn" onclick="confirmPayment(${order.id})" style="background:#10b981;">
+                            <i class="fas fa-check-circle"></i> Konfirmasi Bayar
+                        </button>
+                    ` : ''}
+                    ${order.status === 'completed' ? `
+                        <button class="print-receipt-btn" onclick='printReceipt(${JSON.stringify(order).replace(/'/g, "\\'")})'>
+                            <i class="fas fa-print"></i> Cetak Struk
+                        </button>
+                    ` : ''}
                 </div>
             </div>
         `).join('');
@@ -747,6 +762,28 @@ async function loadOrders() {
         if (ordersList) ordersList.innerHTML = '<div class="text-center">Gagal memuat pesanan</div>';
     }
 }
+
+// Confirm payment function
+window.confirmPayment = async (id) => {
+    if (confirm('Konfirmasi pembayaran untuk pesanan ini?')) {
+        try {
+            const response = await fetch(`${API_URL}/api/orders/${id}/confirm-payment`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paymentStatus: 'paid' })
+            });
+            
+            if (response.ok) {
+                showToast('Pembayaran dikonfirmasi!');
+                loadOrders();
+            } else {
+                showToast('Gagal konfirmasi pembayaran', true);
+            }
+        } catch (error) {
+            showToast('Error: ' + error.message, true);
+        }
+    }
+};
 
 // Update order status
 window.updateOrderStatus = async (id, status) => {

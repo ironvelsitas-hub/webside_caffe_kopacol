@@ -277,7 +277,8 @@ app.post('/api/orders', (req, res) => {
         customerAddress: req.body.customerAddress || null,
         tableNumber: req.body.tableNumber || null,
         note: req.body.note || null,
-        paymentMethod: req.body.paymentMethod || null
+        paymentMethod: req.body.paymentMethod || null,
+        paymentStatus: req.body.paymentStatus || 'pending'
     };
     db.orders.push(newOrder);
     writeDB(db);
@@ -296,6 +297,19 @@ app.put('/api/orders/:id', (req, res) => {
         db.orders[index].status = req.body.status || db.orders[index].status;
         writeDB(db);
         res.json(db.orders[index]);
+    } else {
+        res.status(404).json({ error: 'Order not found' });
+    }
+});
+
+// Confirm payment
+app.put('/api/orders/:id/confirm-payment', (req, res) => {
+    const db = readDB();
+    const index = db.orders.findIndex(o => o.id == req.params.id);
+    if (index !== -1) {
+        db.orders[index].paymentStatus = 'paid';
+        writeDB(db);
+        res.json({ success: true });
     } else {
         res.status(404).json({ error: 'Order not found' });
     }
