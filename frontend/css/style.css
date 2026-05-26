@@ -89,6 +89,7 @@ p { font-size: 0.9rem; line-height: 1.5; color: var(--gray); }
 .logo i { font-size: 1.3rem; }
 
 .nav-menu {
+    display: flex;
     position: fixed;
     left: -100%;
     top: 60px;
@@ -613,6 +614,27 @@ p { font-size: 0.9rem; line-height: 1.5; color: var(--gray); }
     flex: 1;
 }
 
+@media (min-width: 768px) {
+    .admin-container {
+        flex-direction: row;
+    }
+    .admin-sidebar {
+        width: 260px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 1.5rem;
+    }
+    .admin-nav {
+        flex-direction: column;
+        overflow-x: visible;
+        gap: 0.5rem;
+    }
+}
+
+
 .admin-tab { display: none; }
 .admin-tab.active { display: block; }
 
@@ -915,9 +937,6 @@ p { font-size: 0.9rem; line-height: 1.5; color: var(--gray); }
     filter: grayscale(0.3);
 }
 
-.text-center {
-    text-align: center;
-}
 
 /* Responsive */
 @media (max-width: 768px) {
