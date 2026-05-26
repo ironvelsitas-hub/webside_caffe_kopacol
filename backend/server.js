@@ -3,7 +3,6 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,58 +61,65 @@ if (!isProduction) {
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 }
 
-// ============ MONGODB CONNECTION ============
-// Untuk lokal (MongoDB Compass)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = 'cafe-ironcolol';
+// ============ DATABASE ============
+let database = {
+    products: [
+        {
+            id: 1,
+            name: "Espresso",
+            category: "kopi",
+            price: 25000,
+            image: null, // akan diisi base64
+            imageUrl: "https://via.placeholder.com/300x200?text=Espresso",
+            description: "Kopi hitam pekat dengan crema"
+        },
+        {
+            id: 2,
+            name: "Cappuccino",
+            category: "kopi",
+            price: 32000,
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=Cappuccino",
+            description: "Espresso dengan busa susu"
+        },
+        {
+            id: 3,
+            name: "French Fries",
+            category: "snack",
+            price: 18000,
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=French+Fries",
+            description: "Kentang goreng renyah"
+        },
+        {
+            id: 4,
+            name: "Nasi Goreng",
+            category: "makanan",
+            price: 35000,
+            image: null,
+            imageUrl: "https://via.placeholder.com/300x200?text=Nasi+Goreng",
+            description: "Nasi goreng spesial dengan telur"
+        }
+    ],
+    orders: [],
+    tables: Array.from({ length: 10 }, (_, i) => ({ 
+        id: i + 1, 
+        number: i + 1,
+        status: 'available',
+        isActive: true,
+        qrCode: null,
+        qrCodeUrl: null,
+        createdAt: new Date().toISOString()
+    }))
+};
 
-let db;
-let productsCollection;
-let ordersCollection;
-let tablesCollection;
-
-async function connectDB() {
-    try {
-        const client = new MongoClient(MONGODB_URI);
-        await client.connect();
-        console.log('✅ Connected to MongoDB');
-        
-        db = client.db(DB_NAME);
-        productsCollection = db.collection('products');
-        ordersCollection = db.collection('orders');
-        tablesCollection = db.collection('tables');
-        
-        // Inisialisasi data awal jika kosong
-        await initCollections();
-    } catch (error) {
-        console.error('❌ MongoDB connection error:', error);
-    }
+// Helper functions
+function readDB() {
+    return database;
 }
 
-async function initCollections() {
-    // Products
-    const productCount = await productsCollection.countDocuments();
-    if (productCount === 0) {
-        const initialProducts = [
-            { name: "Espresso", category: "kopi", price: 25000, image: "https://via.placeholder.com/300x200?text=Espresso", description: "Kopi hitam pekat dengan crema", createdAt: new Date() },
-            { name: "Cappuccino", category: "kopi", price: 32000, image: "https://via.placeholder.com/300x200?text=Cappuccino", description: "Espresso dengan busa susu", createdAt: new Date() },
-            { name: "French Fries", category: "snack", price: 18000, image: "https://via.placeholder.com/300x200?text=French+Fries", description: "Kentang goreng renyah", createdAt: new Date() },
-            { name: "Nasi Goreng", category: "makanan", price: 35000, image: "https://via.placeholder.com/300x200?text=Nasi+Goreng", description: "Nasi goreng spesial", createdAt: new Date() }
-        ];
-        await productsCollection.insertMany(initialProducts);
-        console.log('Initial products seeded');
-    }
-    
-    // Tables
-    const tableCount = await tablesCollection.countDocuments();
-    if (tableCount === 0) {
-        const initialTables = [];
-        for (let i = 1; i <= 10; i++) {
-            initialTables.push({ number: i, status: 'available', isActive: true, createdAt: new Date() });
-        }
-        await tablesCollection.insertMany(initialTables);
-        console.log('Initial tables seeded');
-    }
+function writeDB(data) {
+    database = data;
 }
 
 // ============ ADMIN AUTH ============
@@ -149,9 +155,14 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // ============ PRODUCT ROUTES ============
-app.get('/api/products', async (req, res) => {
+app.get('/api/products', (req, res) => {
     try {
-        const products = await productsCollection.find().sort({ createdAt: -1 }).toArray();
+        const db = readDB();
+        // Kirimkan imageUrl untuk ditampilkan (bukan base64)
+        const products = db.products.map(p => ({
+            ...p,
+            image: p.imageUrl || 'https://via.placeholder.com/300x200?text=Product'
+        }));
         res.json(products);
     } catch (error) {
         console.error('Error getting products:', error);
@@ -159,31 +170,29 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-app.get('/api/products/:id', async (req, res) => {
-    try {
-        const product = await productsCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (product) {
-            res.json(product);
-        } else {
-            res.status(404).json({ error: 'Product not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Invalid ID' });
+app.get('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const product = db.products.find(p => p.id == req.params.id);
+    if (product) {
+        res.json({
+            ...product,
+            image: product.imageUrl || 'https://via.placeholder.com/300x200?text=Product'
+        });
+    } else {
+        res.status(404).json({ error: 'Product not found' });
     }
 });
 
-app.get('/api/products/category/:category', async (req, res) => {
-    try {
-        const products = await productsCollection.find({ category: req.params.category }).toArray();
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch products' });
-    }
+app.get('/api/products/category/:category', (req, res) => {
+    const db = readDB();
+    const products = db.products.filter(p => p.category === req.params.category);
+    res.json(products);
 });
 
-// POST product (tambah produk baru)
-app.post('/api/products', async (req, res) => {
+// POST product (tambah produk baru) - dengan base64 image
+app.post('/api/products', (req, res) => {
     try {
+        const db = readDB();
         const { name, category, price, description, image } = req.body;
         
         // Validasi input
@@ -196,19 +205,24 @@ app.post('/api/products', async (req, res) => {
         }
         
         const newProduct = {
+            id: Date.now(),
             name: name,
             category: category || 'snack',
             price: parseInt(price),
             description: description || '',
-            image: image || 'https://via.placeholder.com/300x200?text=Product',
-            createdAt: new Date()
+            image: image || null, // simpan base64 jika ada
+            imageUrl: image || 'https://via.placeholder.com/300x200?text=Product'
         };
         
-        const result = await productsCollection.insertOne(newProduct);
+        db.products.push(newProduct);
+        writeDB(db);
         console.log('Product added:', newProduct.name);
         res.status(201).json({ 
             success: true, 
-            product: { ...newProduct, _id: result.insertedId }
+            product: {
+                ...newProduct,
+                image: newProduct.imageUrl
+            }
         });
     } catch (error) {
         console.error('Error adding product:', error);
@@ -217,179 +231,158 @@ app.post('/api/products', async (req, res) => {
 });
 
 // PUT (update) product
-app.put('/api/products/:id', async (req, res) => {
-    try {
-        const { name, category, price, description, image } = req.body;
-        const result = await productsCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: { name, category, price: parseInt(price), description, image } }
-        );
+app.put('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const productId = parseInt(req.params.id);
+    const index = db.products.findIndex(p => p.id === productId);
+    
+    if (index !== -1) {
+        const updatedProduct = {
+            ...db.products[index],
+            name: req.body.name || db.products[index].name,
+            category: req.body.category || db.products[index].category,
+            price: parseInt(req.body.price) || db.products[index].price,
+            description: req.body.description || db.products[index].description,
+            image: req.body.image || db.products[index].image,
+            imageUrl: req.body.image || db.products[index].imageUrl
+        };
         
-        if (result.matchedCount) {
-            res.json({ success: true });
-        } else {
-            res.status(404).json({ error: 'Product not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
+        db.products[index] = updatedProduct;
+        writeDB(db);
+        res.json({ success: true, product: updatedProduct });
+    } else {
+        res.status(404).json({ error: 'Product not found', id: productId });
     }
 });
 
-app.delete('/api/products/:id', async (req, res) => {
-    try {
-        const result = await productsCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if (result.deletedCount) {
-            res.json({ message: 'Product deleted' });
-        } else {
-            res.status(404).json({ error: 'Product not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Delete failed' });
-    }
+app.delete('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const productId = parseInt(req.params.id);
+    db.products = db.products.filter(p => p.id !== productId);
+    writeDB(db);
+    res.json({ message: 'Product deleted' });
 });
 
 // ============ ORDER ROUTES ============
-app.post('/api/orders', async (req, res) => {
-    try {
-        const newOrder = {
-            ...req.body,
-            status: 'pending',
-            createdAt: new Date()
-        };
-        const result = await ordersCollection.insertOne(newOrder);
-        res.json({ ...newOrder, _id: result.insertedId });
-    } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ error: 'Failed to create order' });
-    }
+app.post('/api/orders', (req, res) => {
+    const db = readDB();
+    const newOrder = {
+        id: Date.now(),
+        items: req.body.items || [],
+        total: req.body.total || 0,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        customerName: req.body.customerName || null,
+        customerPhone: req.body.customerPhone || null,
+        customerAddress: req.body.customerAddress || null,
+        tableNumber: req.body.tableNumber || null,
+        note: req.body.note || null,
+        paymentMethod: req.body.paymentMethod || null
+    };
+    db.orders.push(newOrder);
+    writeDB(db);
+    res.json(newOrder);
 });
 
-app.get('/api/orders', async (req, res) => {
-    try {
-        const orders = await ordersCollection.find().sort({ createdAt: -1 }).toArray();
-        res.json(orders);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch orders' });
-    }
+app.get('/api/orders', (req, res) => {
+    const db = readDB();
+    res.json(db.orders);
 });
 
-app.put('/api/orders/:id', async (req, res) => {
-    try {
-        await ordersCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: { status: req.body.status } }
-        );
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
+app.put('/api/orders/:id', (req, res) => {
+    const db = readDB();
+    const index = db.orders.findIndex(o => o.id == req.params.id);
+    if (index !== -1) {
+        db.orders[index].status = req.body.status || db.orders[index].status;
+        writeDB(db);
+        res.json(db.orders[index]);
+    } else {
+        res.status(404).json({ error: 'Order not found' });
     }
 });
 
 // ============ TABLE MANAGEMENT ROUTES ============
-app.get('/api/tables', async (req, res) => {
-    try {
-        const tables = await tablesCollection.find().sort({ number: 1 }).toArray();
-        res.json(tables);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch tables' });
+app.get('/api/tables', (req, res) => {
+    const db = readDB();
+    res.json(db.tables);
+});
+
+app.get('/api/tables/:id', (req, res) => {
+    const db = readDB();
+    const table = db.tables.find(t => t.id == req.params.id);
+    if (table) {
+        res.json(table);
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
-app.get('/api/tables/:id', async (req, res) => {
-    try {
-        const table = await tablesCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (table) {
-            res.json(table);
-        } else {
-            res.status(404).json({ error: 'Table not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Invalid ID' });
+app.post('/api/admin/tables', adminAuth, (req, res) => {
+    const db = readDB();
+    const { number, status } = req.body;
+    
+    if (!number) {
+        return res.status(400).json({ error: 'Nomor meja harus diisi!' });
+    }
+    
+    if (db.tables.some(t => t.number == number)) {
+        return res.status(400).json({ error: 'Nomor meja sudah ada!' });
+    }
+    
+    const newTable = {
+        id: Date.now(),
+        number: parseInt(number),
+        status: status || 'available',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        qrCode: null,
+        qrCodeUrl: null
+    };
+    
+    db.tables.push(newTable);
+    writeDB(db);
+    res.status(201).json({ success: true, table: newTable });
+});
+
+app.put('/api/admin/tables/:id', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        if (req.body.status) db.tables[index].status = req.body.status;
+        if (req.body.isActive !== undefined) db.tables[index].isActive = req.body.isActive;
+        writeDB(db);
+        res.json({ success: true, table: db.tables[index] });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
-// Add new table (admin only)
-app.post('/api/admin/tables', adminAuth, async (req, res) => {
-    try {
-        const { number, status } = req.body;
-        
-        if (!number) {
-            return res.status(400).json({ error: 'Nomor meja harus diisi!' });
-        }
-        
-        // Check if table number already exists
-        const existing = await tablesCollection.findOne({ number: parseInt(number) });
-        if (existing) {
-            return res.status(400).json({ error: 'Nomor meja sudah ada!' });
-        }
-        
-        const newTable = {
-            number: parseInt(number),
-            status: status || 'available',
-            isActive: true,
-            qrCode: null,
-            qrCodeUrl: null,
-            createdAt: new Date()
-        };
-        
-        const result = await tablesCollection.insertOne(newTable);
-        res.status(201).json({ success: true, table: { ...newTable, _id: result.insertedId } });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to add table' });
+app.put('/api/admin/tables/:id/qr', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        if (req.body.qrCode) db.tables[index].qrCode = req.body.qrCode;
+        if (req.body.qrCodeUrl) db.tables[index].qrCodeUrl = req.body.qrCodeUrl;
+        db.tables[index].updatedAt = new Date().toISOString();
+        writeDB(db);
+        res.json({ success: true, table: db.tables[index] });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
-// Update table (admin only)
-app.put('/api/admin/tables/:id', adminAuth, async (req, res) => {
-    try {
-        const updateData = {};
-        if (req.body.status) updateData.status = req.body.status;
-        if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
-        
-        const result = await tablesCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: updateData }
-        );
-        
-        if (result.matchedCount) {
-            res.json({ success: true });
-        } else {
-            res.status(404).json({ error: 'Table not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
-});
-
-// Update table QR code (admin only)
-app.put('/api/admin/tables/:id/qr', adminAuth, async (req, res) => {
-    try {
-        const result = await tablesCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: { qrCode: req.body.qrCode, qrCodeUrl: req.body.qrCodeUrl, updatedAt: new Date() } }
-        );
-        
-        if (result.matchedCount) {
-            res.json({ success: true });
-        } else {
-            res.status(404).json({ error: 'Table not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
-});
-
-// Delete table (admin only)
-app.delete('/api/admin/tables/:id', adminAuth, async (req, res) => {
-    try {
-        const result = await tablesCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if (result.deletedCount) {
-            res.json({ success: true, message: 'Table deleted' });
-        } else {
-            res.status(404).json({ error: 'Table not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Delete failed' });
+app.delete('/api/admin/tables/:id', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        db.tables.splice(index, 1);
+        writeDB(db);
+        res.json({ success: true, message: 'Table deleted' });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
     }
 });
 
@@ -404,22 +397,15 @@ app.get('*', (req, res) => {
 });
 
 // ============ START SERVER ============
-// Start server with MongoDB connection
-connectDB().then(() => {
-    if (!isProduction) {
-        app.listen(PORT, () => {
-            console.log(`\n========================================`);
-            console.log(`🚀 Cafe IronColol Server Running!`);
-            console.log(`========================================`);
-            console.log(`📱 Frontend: http://localhost:${PORT}`);
-            console.log(`📡 API: http://localhost:${PORT}/api/products`);
-            console.log(`🍃 MongoDB: Connected to ${DB_NAME}`);
-            console.log(`📊 Compass: mongodb://localhost:27017`);
-            console.log(`========================================\n`);
-        });
-    } else {
-        console.log(`Server ready for Vercel`);
-    }
-});
+if (!isProduction) {
+    app.listen(PORT, () => {
+        console.log(`\n========================================`);
+        console.log(`🚀 Cafe IronColol Server Running!`);
+        console.log(`========================================`);
+        console.log(`📱 Frontend: http://localhost:${PORT}`);
+        console.log(`📡 API: http://localhost:${PORT}/api/products`);
+        console.log(`========================================\n`);
+    });
+}
 
 module.exports = app;
