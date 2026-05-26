@@ -24,14 +24,17 @@ async function login() {
             document.getElementById('adminPanel').style.display = 'block';
             document.getElementById('adminUsername').textContent = username;
             showToast('Login berhasil!');
-            loadProducts();
-            loadOrders();
-            loadTables();
-            loadQRManagement();
+            
+            // Load semua data setelah login
+            await loadProducts();
+            await loadOrders();
+            await loadTables();
+            await loadQRManagement();
         } else {
             showToast(data.error || 'Login gagal!', true);
         }
     } catch (error) {
+        console.error('Login error:', error);
         showToast('Error: ' + error.message, true);
     }
 }
@@ -48,36 +51,53 @@ function logout() {
 
 // ============ PRODUCT MANAGEMENT ============
 
-// Load products
+// Load products - FIXED
 async function loadProducts() {
+    const tbody = document.getElementById('productsTableBody');
+    if (!tbody) {
+        console.error('productsTableBody not found');
+        return;
+    }
+    
+    // Tampilkan loading
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...</td><\/tr>';
+    
     try {
+        console.log('Fetching products from:', `${API_URL}/api/products`);
         const response = await fetch(`${API_URL}/api/products`);
-        const products = await response.json();
-        const tbody = document.getElementById('productsTableBody');
         
-        if (!tbody) return;
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const products = await response.json();
+        console.log('Products loaded:', products);
         
         if (!products || products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada produk</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada produk. Klik "Tambah Produk" untuk menambahkan.</td><\/tr>';
             return;
         }
         
+        // Render tabel
         tbody.innerHTML = products.map(product => `
             <tr>
-                <td><img src="${product.image || 'https://via.placeholder.com/50'}" class="product-image-cell" onerror="this.src='https://via.placeholder.com/50'"></td>
-                <td><strong>${escapeHtml(product.name || 'No Name')}</strong></td>
-                <td>${product.category || '-'}</td>
-                <td>Rp ${(product.price || 0).toLocaleString()}</td>
+                <td><img src="${product.image || 'https://via.placeholder.com/50'}" class="product-image-cell" onerror="this.src='https://via.placeholder.com/50'"><\/td>
+                <td><strong>${escapeHtml(product.name || 'No Name')}</strong><\/td>
+                <td>${escapeHtml(product.category || '-')}<\/td>
+                <td>Rp ${(product.price || 0).toLocaleString()}<\/td>
                 <td>
                     <button class="action-btn edit-btn" onclick="editProduct(${product.id})"><i class="fas fa-edit"></i> Edit</button>
                     <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})"><i class="fas fa-trash"></i> Hapus</button>
-                </td>
-            </tr>
+                <\/td>
+            <\/tr>
         `).join('');
+        
     } catch (error) {
-        console.error('Error:', error);
-        const tbody = document.getElementById('productsTableBody');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center">Gagal memuat produk</td></tr>';
+        console.error('Error loading products:', error);
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color: red;">
+            <i class="fas fa-exclamation-triangle"></i> Gagal memuat produk: ${error.message}
+            <br><button onclick="loadProducts()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Coba Lagi</button>
+        <\/td><\/tr>`;
     }
 }
 
@@ -110,6 +130,7 @@ window.editProduct = async (id) => {
         document.getElementById('productImage').value = '';
         document.getElementById('productModal').style.display = 'flex';
     } catch (error) {
+        console.error('Error loading product:', error);
         showToast('Gagal memuat data produk: ' + error.message, true);
     }
 };
@@ -121,11 +142,13 @@ window.deleteProduct = async (id) => {
             const response = await fetch(`${API_URL}/api/products/${id}`, { method: 'DELETE' });
             if (response.ok) {
                 showToast('Produk berhasil dihapus');
-                loadProducts();
+                await loadProducts();
             } else {
-                showToast('Gagal menghapus produk', true);
+                const error = await response.json();
+                showToast(error.error || 'Gagal menghapus produk', true);
             }
         } catch (error) {
+            console.error('Error deleting product:', error);
             showToast('Error: ' + error.message, true);
         }
     }
@@ -141,7 +164,7 @@ function convertToBase64(file) {
     });
 }
 
-// Save product (add/edit) - dengan base64 image
+// Save product (add/edit)
 const productForm = document.getElementById('productForm');
 if (productForm) {
     productForm.addEventListener('submit', async (e) => {
@@ -163,15 +186,13 @@ if (productForm) {
         
         console.log('Form values:', { name, category, price, description });
         
-        // Validasi input dengan debugging
+        // Validasi input
         if (!name || name === '') {
-            console.log('Validation failed: name is empty');
             showToast('Nama produk harus diisi!', true);
             return;
         }
         
         if (!price || price <= 0) {
-            console.log('Validation failed: price is invalid', price);
             showToast('Harga harus diisi dengan benar!', true);
             return;
         }
@@ -213,7 +234,7 @@ if (productForm) {
             if (response.ok) {
                 showToast(id ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan');
                 closeProductModal();
-                loadProducts(); // Refresh daftar produk
+                await loadProducts(); // Refresh daftar produk
             } else {
                 showToast(result.error || 'Gagal menyimpan produk', true);
             }
@@ -237,14 +258,14 @@ function closeProductModal() {
     if (productId) productId.value = '';
 }
 
-// Add product button - FIXED dengan event listener yang lebih baik
+// Add product button
 const addProductBtn = document.getElementById('addProductBtn');
 if (addProductBtn) {
     addProductBtn.addEventListener('click', () => {
         console.log('Add product button clicked');
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> Tambah Produk';
         
-        // Reset form dengan aman
+        // Reset form
         const form = document.getElementById('productForm');
         const productId = document.getElementById('productId');
         const previewContainer = document.getElementById('imagePreviewContainer');
@@ -267,20 +288,18 @@ if (addProductBtn) {
     });
 }
 
-// Preview image (untuk file upload) - FIXED dengan validasi lebih baik
+// Preview image
 const productImageInput = document.getElementById('productImage');
 if (productImageInput) {
     productImageInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Validasi tipe file
             if (!file.type.match('image.*')) {
                 showToast('File harus berupa gambar!', true);
                 productImageInput.value = '';
                 return;
             }
             
-            // Validasi ukuran file (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 showToast('Ukuran gambar maksimal 5MB!', true);
                 productImageInput.value = '';
@@ -301,17 +320,15 @@ if (productImageInput) {
     });
 }
 
-// Tambahkan event listener untuk tombol submit dengan ID spesifik - FIXED
+// Submit button
 const submitBtn = document.getElementById('submitProductBtn');
 if (submitBtn) {
     submitBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         console.log('Submit button clicked');
-        // Trigger form submit
         const form = document.getElementById('productForm');
         if (form) {
-            // Buat event submit manually
             const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
             form.dispatchEvent(submitEvent);
         }
@@ -400,7 +417,7 @@ window.deleteTable = async (id) => {
         return;
     }
     
-    if (confirm('Yakin ingin menghapus meja ini? Menghapus meja akan menghilangkan QR code terkait.')) {
+    if (confirm('Yakin ingin menghapus meja ini?')) {
         try {
             const response = await fetch(`${API_URL}/api/admin/tables/${id}`, {
                 method: 'DELETE',
