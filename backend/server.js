@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
@@ -18,7 +19,44 @@ app.options('*', cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Database file - Gunakan memory storage untuk Vercel
+// ============ MULTER CONFIGURATION FOR IMAGE UPLOAD ============
+// Setup multer for image upload
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = './uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+  
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Hanya gambar yang diperbolehkan!'));
+  }
+};
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: fileFilter
+});
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ============ DATABASE ============
 let database = {
     products: [
         {
@@ -91,7 +129,10 @@ let database = {
         id: i + 1, 
         number: i + 1,
         status: 'available',
-        isActive: true
+        isActive: true,
+        qrCode: null,
+        qrCodeUrl: null,
+        createdAt: new Date().toISOString()
     }))
 };
 
@@ -105,6 +146,22 @@ function writeDB(data) {
 }
 
 // ============ ADMIN AUTH ============
+function adminAuth(req, res, next) {
+    const token = req.headers['authorization'];
+    const db = readDB();
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized access - No token' });
+    }
+    
+    // Simple token validation
+    if (token && token.includes('admin_token_')) {
+        return next();
+    }
+    
+    return res.status(401).json({ error: 'Unauthorized access - Invalid token' });
+}
+
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
     
@@ -134,13 +191,25 @@ app.get('/api/products', (req, res) => {
     }
 });
 
+// Get single product by ID
+app.get('/api/products/:id', (req, res) => {
+    const db = readDB();
+    const product = db.products.find(p => p.id == req.params.id);
+    if (product) {
+        res.json(product);
+    } else {
+        res.status(404).json({ error: 'Product not found' });
+    }
+});
+
 app.get('/api/products/category/:category', (req, res) => {
     const db = readDB();
     const products = db.products.filter(p => p.category === req.params.category);
     res.json(products);
 });
 
-app.post('/api/products', (req, res) => {
+// POST product with image upload
+app.post('/api/products', upload.single('image'), (req, res) => {
     const db = readDB();
     const newProduct = {
         id: Date.now(),
@@ -148,35 +217,46 @@ app.post('/api/products', (req, res) => {
         category: req.body.category,
         price: parseInt(req.body.price),
         description: req.body.description || '',
-        image: req.body.image || 'https://via.placeholder.com/300x200?text=Product'
+        image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || 'https://via.placeholder.com/300x200?text=Product')
     };
     db.products.push(newProduct);
     writeDB(db);
     res.json(newProduct);
 });
 
-app.put('/api/products/:id', (req, res) => {
+// PUT (update) product with image upload
+app.put('/api/products/:id', upload.single('image'), (req, res) => {
     const db = readDB();
-    const index = db.products.findIndex(p => p.id == req.params.id);
+    const productId = parseInt(req.params.id);
+    const index = db.products.findIndex(p => p.id === productId);
+    
+    console.log('Updating product ID:', productId);
+    console.log('Found at index:', index);
+    
     if (index !== -1) {
-        db.products[index] = {
-            ...db.products[index],
+        const updatedProduct = {
+            id: productId,
             name: req.body.name || db.products[index].name,
             category: req.body.category || db.products[index].category,
             price: parseInt(req.body.price) || db.products[index].price,
             description: req.body.description || db.products[index].description,
-            image: req.body.image || db.products[index].image
+            image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || db.products[index].image)
         };
+        
+        db.products[index] = updatedProduct;
         writeDB(db);
-        res.json(db.products[index]);
+        console.log('Product updated:', updatedProduct);
+        res.json({ success: true, product: updatedProduct });
     } else {
-        res.status(404).json({ error: 'Product not found' });
+        console.log('Product not found with ID:', productId);
+        res.status(404).json({ error: 'Product not found', id: productId });
     }
 });
 
 app.delete('/api/products/:id', (req, res) => {
     const db = readDB();
-    db.products = db.products.filter(p => p.id != req.params.id);
+    const productId = parseInt(req.params.id);
+    db.products = db.products.filter(p => p.id !== productId);
     writeDB(db);
     res.json({ message: 'Product deleted' });
 });
@@ -194,7 +274,8 @@ app.post('/api/orders', (req, res) => {
         customerPhone: req.body.customerPhone || null,
         customerAddress: req.body.customerAddress || null,
         tableNumber: req.body.tableNumber || null,
-        note: req.body.note || null
+        note: req.body.note || null,
+        paymentMethod: req.body.paymentMethod || null
     };
     db.orders.push(newOrder);
     writeDB(db);
@@ -218,10 +299,98 @@ app.put('/api/orders/:id', (req, res) => {
     }
 });
 
-// ============ TABLE ROUTES ============
+// ============ TABLE MANAGEMENT ROUTES ============
+
+// Get all tables (public)
 app.get('/api/tables', (req, res) => {
     const db = readDB();
     res.json(db.tables);
+});
+
+// Get single table (public)
+app.get('/api/tables/:id', (req, res) => {
+    const db = readDB();
+    const table = db.tables.find(t => t.id == req.params.id);
+    if (table) {
+        res.json(table);
+    } else {
+        res.status(404).json({ error: 'Table not found' });
+    }
+});
+
+// Add new table (admin only)
+app.post('/api/admin/tables', adminAuth, (req, res) => {
+    const db = readDB();
+    const { number, status } = req.body;
+    
+    // Validate input
+    if (!number) {
+        return res.status(400).json({ error: 'Nomor meja harus diisi!' });
+    }
+    
+    // Check if table number already exists
+    if (db.tables.some(t => t.number == number)) {
+        return res.status(400).json({ error: 'Nomor meja sudah ada!' });
+    }
+    
+    const newTable = {
+        id: Date.now(),
+        number: parseInt(number),
+        status: status || 'available',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        qrCode: null,
+        qrCodeUrl: null
+    };
+    
+    db.tables.push(newTable);
+    writeDB(db);
+    res.status(201).json({ success: true, table: newTable });
+});
+
+// Update table (admin only)
+app.put('/api/admin/tables/:id', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        if (req.body.status) db.tables[index].status = req.body.status;
+        if (req.body.isActive !== undefined) db.tables[index].isActive = req.body.isActive;
+        writeDB(db);
+        res.json({ success: true, table: db.tables[index] });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
+    }
+});
+
+// Update table QR code (admin only)
+app.put('/api/admin/tables/:id/qr', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        if (req.body.qrCode) db.tables[index].qrCode = req.body.qrCode;
+        if (req.body.qrCodeUrl) db.tables[index].qrCodeUrl = req.body.qrCodeUrl;
+        db.tables[index].updatedAt = new Date().toISOString();
+        writeDB(db);
+        res.json({ success: true, table: db.tables[index] });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
+    }
+});
+
+// Delete table (admin only)
+app.delete('/api/admin/tables/:id', adminAuth, (req, res) => {
+    const db = readDB();
+    const index = db.tables.findIndex(t => t.id == req.params.id);
+    
+    if (index !== -1) {
+        db.tables.splice(index, 1);
+        writeDB(db);
+        res.json({ success: true, message: 'Table deleted' });
+    } else {
+        res.status(404).json({ error: 'Table not found' });
+    }
 });
 
 // ============ SERVE FRONTEND ============
@@ -244,6 +413,7 @@ app.listen(PORT, () => {
     console.log(`========================================`);
     console.log(`📱 Frontend: http://localhost:${PORT}`);
     console.log(`📡 API: http://localhost:${PORT}/api/products`);
+    console.log(`🖼️  Uploads: http://localhost:${PORT}/uploads`);
     console.log(`========================================\n`);
 });
 
