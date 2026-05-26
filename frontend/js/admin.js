@@ -71,8 +71,8 @@ async function loadProducts() {
                 <td>
                     <button class="action-btn edit-btn" onclick="editProduct(${product.id})"><i class="fas fa-edit"></i> Edit</button>
                     <button class="action-btn delete-btn" onclick="deleteProduct(${product.id})"><i class="fas fa-trash"></i> Hapus</button>
-                 </td>
-             </tr>
+                </td>
+            </tr>
         `).join('');
     } catch (error) {
         console.error('Error:', error);
@@ -146,30 +146,42 @@ const productForm = document.getElementById('productForm');
 if (productForm) {
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        e.stopPropagation();
         
-        const id = document.getElementById('productId').value;
-        const name = document.getElementById('productName').value;
-        const category = document.getElementById('productCategory').value;
-        const price = document.getElementById('productPrice').value;
-        const description = document.getElementById('productDescription').value;
+        // Ambil nilai dengan cara yang lebih aman
+        const id = document.getElementById('productId') ? document.getElementById('productId').value : '';
+        const nameInput = document.getElementById('productName');
+        const categorySelect = document.getElementById('productCategory');
+        const priceInput = document.getElementById('productPrice');
+        const descriptionTextarea = document.getElementById('productDescription');
+        const imageFileInput = document.getElementById('productImage');
         
-        // Validasi input
-        if (!name) {
+        const name = nameInput ? nameInput.value.trim() : '';
+        const category = categorySelect ? categorySelect.value : 'snack';
+        const price = priceInput ? priceInput.value : '0';
+        const description = descriptionTextarea ? descriptionTextarea.value : '';
+        
+        console.log('Form values:', { name, category, price, description });
+        
+        // Validasi input dengan debugging
+        if (!name || name === '') {
+            console.log('Validation failed: name is empty');
             showToast('Nama produk harus diisi!', true);
             return;
         }
         
         if (!price || price <= 0) {
+            console.log('Validation failed: price is invalid', price);
             showToast('Harga harus diisi dengan benar!', true);
             return;
         }
         
         // Proses gambar jika ada file yang dipilih
         let imageBase64 = null;
-        const imageFile = document.getElementById('productImage').files[0];
+        const imageFile = imageFileInput ? imageFileInput.files[0] : null;
         
         if (imageFile) {
-            // Konversi file ke base64
+            console.log('Converting image to base64...');
             imageBase64 = await convertToBase64(imageFile);
         }
         
@@ -178,10 +190,10 @@ if (productForm) {
             category: category,
             price: parseInt(price),
             description: description,
-            image: imageBase64 // kirim base64
+            image: imageBase64
         };
         
-        console.log('Saving product with image:', imageFile ? 'Yes' : 'No');
+        console.log('Saving product:', productData);
         
         const url = id ? `${API_URL}/api/products/${id}` : `${API_URL}/api/products`;
         const method = id ? 'PUT' : 'POST';
@@ -225,12 +237,56 @@ function closeProductModal() {
     if (productId) productId.value = '';
 }
 
-// Preview image (untuk file upload)
+// Add product button - FIXED dengan event listener yang lebih baik
+const addProductBtn = document.getElementById('addProductBtn');
+if (addProductBtn) {
+    addProductBtn.addEventListener('click', () => {
+        console.log('Add product button clicked');
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> Tambah Produk';
+        
+        // Reset form dengan aman
+        const form = document.getElementById('productForm');
+        const productId = document.getElementById('productId');
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const nameInput = document.getElementById('productName');
+        const categorySelect = document.getElementById('productCategory');
+        const priceInput = document.getElementById('productPrice');
+        const descriptionTextarea = document.getElementById('productDescription');
+        const imageInput = document.getElementById('productImage');
+        
+        if (form) form.reset();
+        if (productId) productId.value = '';
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (nameInput) nameInput.value = '';
+        if (categorySelect) categorySelect.value = 'kopi';
+        if (priceInput) priceInput.value = '';
+        if (descriptionTextarea) descriptionTextarea.value = '';
+        if (imageInput) imageInput.value = '';
+        
+        document.getElementById('productModal').style.display = 'flex';
+    });
+}
+
+// Preview image (untuk file upload) - FIXED dengan validasi lebih baik
 const productImageInput = document.getElementById('productImage');
 if (productImageInput) {
     productImageInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Validasi tipe file
+            if (!file.type.match('image.*')) {
+                showToast('File harus berupa gambar!', true);
+                productImageInput.value = '';
+                return;
+            }
+            
+            // Validasi ukuran file (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Ukuran gambar maksimal 5MB!', true);
+                productImageInput.value = '';
+                return;
+            }
+            
             const reader = new FileReader();
             reader.onload = (e) => {
                 const previewContainer = document.getElementById('imagePreviewContainer');
@@ -245,19 +301,20 @@ if (productImageInput) {
     });
 }
 
-// Add product button
-const addProductBtn = document.getElementById('addProductBtn');
-if (addProductBtn) {
-    addProductBtn.addEventListener('click', () => {
-        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus"></i> Tambah Produk';
+// Tambahkan event listener untuk tombol submit dengan ID spesifik - FIXED
+const submitBtn = document.getElementById('submitProductBtn');
+if (submitBtn) {
+    submitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Submit button clicked');
+        // Trigger form submit
         const form = document.getElementById('productForm');
-        const previewContainer = document.getElementById('imagePreviewContainer');
-        const productId = document.getElementById('productId');
-        
-        if (form) form.reset();
-        if (productId) productId.value = '';
-        if (previewContainer) previewContainer.style.display = 'none';
-        document.getElementById('productModal').style.display = 'flex';
+        if (form) {
+            // Buat event submit manually
+            const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
+            form.dispatchEvent(submitEvent);
+        }
     });
 }
 

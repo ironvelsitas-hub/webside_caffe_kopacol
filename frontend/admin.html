@@ -426,11 +426,11 @@
                         <button class="btn-primary" id="addProductBtn"><i class="fas fa-plus"></i> Tambah Produk</button>
                     </div>
                     <div class="products-table">
-                        <table>
+                        <tr>
                             <thead>
                                 <tr><th>Gambar</th><th>Nama</th><th>Kategori</th><th>Harga</th><th>Aksi</th></tr>
                             </thead>
-                            <tbody id="productsTableBody"><tr><td colspan="5" class="text-center">Loading...</td></tr></tbody>
+                            <tbody id="productsTableBody"><tr><td colspan="5" class="text-center">Loading...<\/td><\/tr><\/tbody>
                         </table>
                     </div>
                 </div>
@@ -489,48 +489,63 @@
     <!-- Hidden div untuk print struk -->
     <div id="receiptPrintArea" style="display: none;"></div>
 
-<!-- Product Modal -->
-<div id="productModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2 id="modalTitle">Tambah Produk</h2>
-        <form id="productForm">
-            <input type="hidden" id="productId">
-            <div class="form-group">
-                <label>Nama Produk *</label>
-                <input type="text" id="productName" required placeholder="Contoh: Ice Latte">
-            </div>
-            <div class="form-group">
-                <label>Kategori</label>
-                <select id="productCategory" required>
-                    <option value="kopi">☕ Kopi</option>
-                    <option value="makanan">🍚 Makanan</option>
-                    <option value="snack">🍿 Snack</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Harga (Rp) *</label>
-                <input type="number" id="productPrice" required placeholder="25000" min="0">
-            </div>
-            <div class="form-group">
-                <label>Deskripsi</label>
-                <textarea id="productDescription" rows="3" placeholder="Deskripsi produk..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Gambar Produk</label>
-                <input type="file" id="productImage" accept="image/*">
-                <small style="color: #666; display: block; margin-top: 5px;">Upload gambar produk (max 5MB)</small>
-                <div class="image-preview" id="imagePreviewContainer" style="display:none; margin-top: 10px;">
-                    <img id="imagePreview" src="" style="max-width: 100px; border-radius: 8px;">
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Tambah Produk</h2>
+            <form id="productForm" onsubmit="return false;">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label>Nama Produk *</label>
+                    <input type="text" id="productName" required placeholder="Contoh: Nasi Padang" autocomplete="off">
+                    <small style="color: #999;">Masukkan nama produk</small>
                 </div>
-            </div>
-            <button type="submit" class="btn-primary" style="width:100%">
-                <i class="fas fa-save"></i> Simpan
-            </button>
-        </form>
+                <div class="form-group">
+                    <label>Kategori</label>
+                    <select id="productCategory" required>
+                        <option value="kopi">☕ Kopi</option>
+                        <option value="makanan">🍚 Makanan</option>
+                        <option value="snack">🍿 Snack</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Harga (Rp) *</label>
+                    <input type="number" id="productPrice" required placeholder="25000" min="0" step="1000">
+                    <small style="color: #999;">Harga dalam Rupiah</small>
+                </div>
+                <div class="form-group">
+                    <label>Deskripsi</label>
+                    <textarea id="productDescription" rows="3" placeholder="Deskripsi produk..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Gambar Produk</label>
+                    <input type="file" id="productImage" accept="image/*">
+                    <small style="color: #999; display: block; margin-top: 5px;">Upload gambar produk (max 5MB, format: JPG, PNG, GIF)</small>
+                    <div class="image-preview" id="imagePreviewContainer" style="display:none; margin-top: 10px;">
+                        <img id="imagePreview" src="" style="max-width: 100px; border-radius: 8px; border: 1px solid #ddd; padding: 5px;">
+                        <br>
+                        <button type="button" onclick="removeImagePreview()" style="margin-top: 5px; background: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 5px; cursor: pointer;">Hapus Preview</button>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%" id="submitProductBtn">
+                    <i class="fas fa-save"></i> Simpan Produk
+                </button>
+            </form>
+        </div>
     </div>
-</div>
+
     <div id="toast" class="toast"></div>
+
+    <script>
+    // Fungsi untuk menghapus preview gambar
+    function removeImagePreview() {
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const imageInput = document.getElementById('productImage');
+        if (previewContainer) previewContainer.style.display = 'none';
+        if (imageInput) imageInput.value = '';
+    }
+    </script>
 
     <script src="js/admin.js"></script>
 </body>
