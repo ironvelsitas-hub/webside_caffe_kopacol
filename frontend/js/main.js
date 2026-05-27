@@ -13,6 +13,169 @@ console.log('API_URL:', API_URL);
 let html5QrCode = null;
 let isScanning = false;
 
+// ============ PROFILE SIDEBAR FUNCTIONS ============
+
+// Update profile display
+function updateProfileDisplay() {
+    const userPhone = localStorage.getItem('userPhone');
+    const userName = localStorage.getItem('userName');
+    const profileName = document.getElementById('profileName');
+    const profilePhone = document.getElementById('profilePhone');
+    const userAvatar = document.getElementById('userAvatar');
+    
+    if (userPhone) {
+        if (profileName) profileName.textContent = userName || 'Customer';
+        if (profilePhone) profilePhone.textContent = userPhone;
+        if (userAvatar) {
+            userAvatar.innerHTML = '<i class="fas fa-user-check"></i>';
+            userAvatar.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        }
+    } else {
+        if (profileName) profileName.textContent = 'Guest User';
+        if (profilePhone) profilePhone.textContent = 'Not logged in';
+        if (userAvatar) {
+            userAvatar.innerHTML = '<i class="fas fa-user"></i>';
+            userAvatar.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+        }
+    }
+}
+
+// Open profile sidebar
+function openProfileSidebar() {
+    const sidebar = document.getElementById('profileSidebar');
+    const overlay = document.getElementById('profileOverlay');
+    if (sidebar && overlay) {
+        sidebar.classList.add('active');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        
+        // Update order badge
+        updateOrderBadge();
+    }
+}
+
+// Close profile sidebar
+function closeProfileSidebar() {
+    const sidebar = document.getElementById('profileSidebar');
+    const overlay = document.getElementById('profileOverlay');
+    if (sidebar && overlay) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// Update order badge count
+async function updateOrderBadge() {
+    const userPhone = localStorage.getItem('userPhone');
+    const badge = document.getElementById('orderBadge');
+    if (!badge) return;
+    
+    if (!userPhone) {
+        badge.textContent = '0';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/orders`);
+        const orders = await response.json();
+        const userOrders = orders.filter(o => o.customerPhone === userPhone);
+        const pendingOrders = userOrders.filter(o => o.status === 'pending' || o.status === 'processing');
+        badge.textContent = pendingOrders.length;
+    } catch (error) {
+        console.error('Error fetching orders:', error);
+        badge.textContent = '0';
+    }
+}
+
+// Show my orders
+async function showMyOrders() {
+    const userPhone = localStorage.getItem('userPhone');
+    const modal = document.getElementById('myOrdersModal');
+    const ordersList = document.getElementById('ordersHistoryList');
+    
+    if (!userPhone) {
+        showToast('Silakan login terlebih dahulu!', true);
+        closeProfileSidebar();
+        return;
+    }
+    
+    if (modal && ordersList) {
+        modal.style.display = 'flex';
+        ordersList.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat pesanan...</div>';
+        
+        try {
+            const response = await fetch(`${API_URL}/api/orders`);
+            const orders = await response.json();
+            const userOrders = orders.filter(o => o.customerPhone === userPhone).reverse();
+            
+            if (userOrders.length === 0) {
+                ordersList.innerHTML = `
+                    <div class="text-center" style="padding: 2rem;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; color: #ddd;"></i>
+                        <p>Belum ada pesanan</p>
+                        <a href="menu.html" class="btn btn-primary" style="margin-top: 1rem;">Mulai Pesan</a>
+                    </div>
+                `;
+            } else {
+                ordersList.innerHTML = userOrders.map(order => `
+                    <div class="order-history-item" style="background: #f8f9fa; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <strong>#${order.id}</strong>
+                            <span class="order-status status-${order.status}" style="padding: 2px 10px; border-radius: 20px; font-size: 0.7rem;">${order.status}</span>
+                        </div>
+                        <div style="font-size: 0.85rem;">
+                            ${order.items ? order.items.map(item => `<div>${item.name} x${item.quantity}</div>`).join('') : ''}
+                        </div>
+                        <div style="margin-top: 0.5rem; font-weight: bold;">Total: Rp ${(order.total || 0).toLocaleString()}</div>
+                        <div style="font-size: 0.7rem; color: #999;">${new Date(order.createdAt).toLocaleString('id-ID')}</div>
+                        ${order.type === 'delivery' ? '<div style="font-size: 0.7rem; color: #667eea;"><i class="fas fa-motorcycle"></i> Pesanan Antar</div>' : ''}
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            ordersList.innerHTML = '<div class="text-center">Gagal memuat pesanan</div>';
+        }
+    }
+}
+
+// Show table info
+function showTableInfo() {
+    const tableNumber = localStorage.getItem('tableNumber');
+    if (tableNumber) {
+        showToast(`Anda sedang berada di Meja ${tableNumber}`);
+    } else {
+        showToast('Anda belum memilih meja. Scan QR code untuk memilih meja.');
+    }
+    closeProfileSidebar();
+}
+
+// Show help
+function showHelp() {
+    showToast('Hubungi CS: 0812-3456-7890 atau melalui WhatsApp');
+    closeProfileSidebar();
+}
+
+// Logout user
+function logoutUser() {
+    if (confirm('Yakin ingin logout?')) {
+        localStorage.removeItem('userPhone');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userLoginTime');
+        localStorage.removeItem('tableNumber');
+        updateProfileDisplay();
+        closeProfileSidebar();
+        showToast('Logout berhasil');
+        
+        // Refresh page to reset state
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    }
+}
+
+// ============ EXISTING FUNCTIONS ============
+
 // Load cart count
 function updateCartCount() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -105,7 +268,6 @@ async function loadAvailableTables() {
                 return;
             }
             
-            // Filter hanya meja yang aktif
             const activeTables = tables.filter(t => t.isActive !== false);
             
             if (activeTables.length === 0) {
@@ -119,7 +281,6 @@ async function loadAvailableTables() {
                 </button>
             `).join('');
             
-            // Add event listeners to buttons
             document.querySelectorAll('.manual-table-btn').forEach(btn => {
                 btn.onclick = () => {
                     const tableNumber = btn.dataset.table;
@@ -145,18 +306,15 @@ async function startQrScanner() {
     const qrReaderId = "qr-reader";
     const qrStatus = document.getElementById('qr-status');
     
-    // Cek library
     if (typeof Html5Qrcode === 'undefined') {
         if (qrStatus) {
             qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Library tidak tersedia. Silakan pilih meja manual.';
             qrStatus.style.background = '#fee2e2';
             qrStatus.style.color = '#dc2626';
         }
-        showToast('Scanner tidak tersedia, gunakan pilihan manual', true);
         return;
     }
     
-    // Bersihkan scanner lama
     if (html5QrCode) {
         try {
             await html5QrCode.stop();
@@ -164,23 +322,9 @@ async function startQrScanner() {
         html5QrCode = null;
     }
     
-    // Buat container untuk scanner
-    let readerContainer = document.getElementById(qrReaderId);
-    if (!readerContainer) {
-        readerContainer = document.createElement('div');
-        readerContainer.id = qrReaderId;
-        readerContainer.style.width = '100%';
-        const modalContent = document.querySelector('#qrModal .modal-content');
-        if (modalContent) {
-            const videoContainer = modalContent.querySelector('.scanner-container');
-            if (videoContainer) {
-                videoContainer.appendChild(readerContainer);
-            }
-        }
-    }
-    
-    if (readerContainer) {
-        readerContainer.innerHTML = '';
+    const readerElement = document.getElementById(qrReaderId);
+    if (readerElement) {
+        readerElement.innerHTML = '';
     }
     
     html5QrCode = new Html5Qrcode(qrReaderId);
@@ -200,31 +344,28 @@ async function startQrScanner() {
                 handleScanResult(decodedText);
             },
             (errorMessage) => {
-                // Silent error
                 console.debug("Scanning...");
             }
         );
         
-        isScanning = true;
         if (qrStatus) {
             qrStatus.innerHTML = '<i class="fas fa-camera"></i> Kamera aktif, arahkan ke QR code...';
             qrStatus.style.background = '#d1fae5';
             qrStatus.style.color = '#059669';
         }
-        showToast('Kamera dimulai, arahkan ke QR code meja');
         
     } catch (err) {
-        console.error("Error:", err);
+        console.error("Error starting scanner:", err);
         if (qrStatus) {
-            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat akses kamera. ' + err.message;
+            qrStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Tidak dapat mengakses kamera. Silakan pilih meja manual.';
             qrStatus.style.background = '#fee2e2';
             qrStatus.style.color = '#dc2626';
         }
-        showToast('Tidak dapat akses kamera, gunakan pilihan manual', true);
+        showToast('Kamera tidak tersedia, gunakan pilihan manual', true);
     }
 }
 
-// Stop scanner
+// Stop QR Scanner
 async function stopQrScanner() {
     if (html5QrCode && isScanning) {
         try {
@@ -239,7 +380,6 @@ async function stopQrScanner() {
 function handleScanResult(decodedText) {
     let tableNumber = null;
     
-    // Extract nomor meja dari berbagai format
     if (decodedText.includes('table=')) {
         const match = decodedText.match(/table=(\d+)/);
         if (match) tableNumber = match[1];
@@ -255,14 +395,6 @@ function handleScanResult(decodedText) {
     }
     
     if (tableNumber && tableNumber >= 1) {
-        // Update status
-        const qrStatus = document.getElementById('qr-status');
-        if (qrStatus) {
-            qrStatus.innerHTML = `<i class="fas fa-check-circle"></i> Berhasil! Meja ${tableNumber} terdeteksi`;
-            qrStatus.style.background = '#d1fae5';
-            qrStatus.style.color = '#059669';
-        }
-        
         stopQrScanner();
         localStorage.setItem('tableNumber', tableNumber);
         showToast(`✅ Terhubung ke Meja ${tableNumber}!`);
@@ -274,11 +406,11 @@ function handleScanResult(decodedText) {
             window.location.href = `menu.html?table=${tableNumber}`;
         }, 500);
     } else {
-        showToast("QR Code tidak valid. Scan ulang QR code meja yang benar.", true);
+        showToast("QR Code tidak valid. Scan ulang QR code meja.", true);
     }
 }
 
-// Initialize QR Scanner UI
+// Initialize QR Scanner
 function initQRScanner() {
     const qrModal = document.getElementById('qrModal');
     const scanBtn = document.getElementById('scanQRBtn');
@@ -298,19 +430,6 @@ function initQRScanner() {
         await startQrScanner();
     };
     
-    const stopScanBtn = document.getElementById('stopScanBtn');
-    if (stopScanBtn) {
-        stopScanBtn.onclick = () => {
-            stopQrScanner();
-            const qrStatus = document.getElementById('qr-status');
-            if (qrStatus) {
-                qrStatus.innerHTML = '<i class="fas fa-stop"></i> Scanner dihentikan';
-                qrStatus.style.background = '#fee2e2';
-                qrStatus.style.color = '#dc2626';
-            }
-        };
-    }
-    
     const manualBtn = document.getElementById('manualTableBtn');
     const manualModal = document.getElementById('manualTableModal');
     
@@ -321,7 +440,6 @@ function initQRScanner() {
             stopQrScanner();
             qrModal.style.display = 'none';
             manualModal.style.display = 'block';
-            // Load daftar meja saat modal manual dibuka
             loadAvailableTables();
         };
         
@@ -337,6 +455,8 @@ function initQRScanner() {
 async function loadMenu(category = 'all') {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
+    
+    displayTableInfoBar(localStorage.getItem('tableNumber'));
     
     menuGrid.innerHTML = '<div class="text-center" style="padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> Memuat menu...</div>';
     
@@ -366,7 +486,7 @@ async function loadMenu(category = 'all') {
         
         menuGrid.innerHTML = filteredProducts.map(product => `
             <div class="product-card animate-fadeIn">
-                <img src="${product.image || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+                <img src="${product.image}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
                 <div class="product-info">
                     <h3 class="product-title">${escapeHtml(product.name)}</h3>
                     <p class="product-description">${escapeHtml(product.description || 'Nikmati kelezatan produk kami')}</p>
@@ -391,6 +511,7 @@ async function loadMenu(category = 'all') {
         `;
     }
 }
+
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
@@ -456,6 +577,9 @@ if (menuToggle && navMenu) {
 window.onclick = (event) => {
     const qrModal = document.getElementById('qrModal');
     const manualModal = document.getElementById('manualTableModal');
+    const ordersModal = document.getElementById('myOrdersModal');
+    const sidebar = document.getElementById('profileSidebar');
+    const overlay = document.getElementById('profileOverlay');
     
     if (event.target === qrModal) {
         stopQrScanner();
@@ -464,6 +588,12 @@ window.onclick = (event) => {
     if (event.target === manualModal) {
         manualModal.style.display = 'none';
     }
+    if (event.target === ordersModal) {
+        ordersModal.style.display = 'none';
+    }
+    if (event.target === overlay) {
+        closeProfileSidebar();
+    }
 };
 
 // Initialize
@@ -471,8 +601,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartCount();
     checkTableFromURL();
     displayTableInfo();
+    updateProfileDisplay();
     
-    // Display table info bar if table number exists
     const savedTableNumber = localStorage.getItem('tableNumber');
     if (savedTableNumber && window.location.pathname.includes('menu.html')) {
         displayTableInfoBar(savedTableNumber);
@@ -484,4 +614,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     initQRScanner();
+    
+    // Profile sidebar event listeners
+    const profileAvatarBtn = document.getElementById('profileAvatarBtn');
+    const closeProfileBtn = document.getElementById('closeProfileBtn');
+    const myOrdersBtn = document.getElementById('myOrdersBtn');
+    const myTableBtn = document.getElementById('myTableBtn');
+    const helpBtn = document.getElementById('helpBtn');
+    const logoutMenuItem = document.getElementById('logoutMenuItem');
+    const ordersModalClose = document.querySelector('#myOrdersModal .close-orders');
+    
+    if (profileAvatarBtn) {
+        profileAvatarBtn.addEventListener('click', openProfileSidebar);
+    }
+    if (closeProfileBtn) {
+        closeProfileBtn.addEventListener('click', closeProfileSidebar);
+    }
+    if (myOrdersBtn) {
+        myOrdersBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showMyOrders();
+        });
+    }
+    if (myTableBtn) {
+        myTableBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showTableInfo();
+        });
+    }
+    if (helpBtn) {
+        helpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showHelp();
+        });
+    }
+    if (logoutMenuItem) {
+        logoutMenuItem.addEventListener('click', logoutUser);
+    }
+    if (ordersModalClose) {
+        ordersModalClose.onclick = () => {
+            document.getElementById('myOrdersModal').style.display = 'none';
+        };
+    }
 });

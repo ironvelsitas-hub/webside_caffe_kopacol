@@ -109,9 +109,184 @@
             cursor: pointer;
             font-size: 12px;
         }
+        
+        /* Sidebar Profile Styles */
+        .profile-sidebar {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 320px;
+            height: 100vh;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            z-index: 1001;
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: -5px 0 30px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+        
+        .profile-sidebar.active {
+            right: 0;
+        }
+        
+        .profile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .profile-overlay.active {
+            display: block;
+        }
+        
+        .profile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+        
+        .profile-avatar i {
+            font-size: 3rem;
+            color: white;
+        }
+        
+        .profile-name {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+        
+        .profile-phone {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.85rem;
+        }
+        
+        .profile-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .profile-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
+        
+        .profile-menu {
+            padding: 1rem 0;
+        }
+        
+        .profile-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .profile-menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            border-left-color: #667eea;
+        }
+        
+        .profile-menu-item i {
+            width: 24px;
+            font-size: 1.1rem;
+            color: #667eea;
+        }
+        
+        .profile-menu-item span {
+            flex: 1;
+        }
+        
+        .profile-menu-item .badge {
+            background: #ef4444;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+        }
+        
+        .logout-item {
+            color: #ef4444;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 1rem;
+        }
+        
+        .logout-item i {
+            color: #ef4444;
+        }
+        
+        .profile-footer {
+            padding: 1rem 1.5rem;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        .profile-avatar-btn {
+            position: relative;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .user-avatar i {
+            font-size: 1.2rem;
+            color: white;
+        }
+        
+        .user-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(102,126,234,0.5);
+        }
+        
         body {
             padding-top: 60px;
         }
+        
         @media (max-width: 768px) {
             .scanner-frame { width: 70%; height: 70%; }
             .table-info-bar {
@@ -123,6 +298,9 @@
             }
             body {
                 padding-top: 100px;
+            }
+            .profile-sidebar {
+                width: 280px;
             }
         }
     </style>
@@ -142,6 +320,11 @@
                 <li><a href="#about" class="nav-link">Tentang</a></li>
             </ul>
             <div class="nav-icons">
+                <div class="profile-avatar-btn" id="profileAvatarBtn">
+                    <div class="user-avatar" id="userAvatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
                 <a href="cart.html" class="cart-icon">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count">0</span>
@@ -152,6 +335,60 @@
             </div>
         </div>
     </nav>
+
+    <!-- Profile Sidebar -->
+    <div class="profile-overlay" id="profileOverlay"></div>
+    <div class="profile-sidebar" id="profileSidebar">
+        <div class="profile-header">
+            <button class="profile-close" id="closeProfileBtn">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="profile-avatar">
+                <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="profile-name" id="profileName">Guest User</div>
+            <div class="profile-phone" id="profilePhone">Not logged in</div>
+        </div>
+        
+        <div class="profile-menu">
+            <a href="menu.html" class="profile-menu-item">
+                <i class="fas fa-utensils"></i>
+                <span>Menu Pesanan</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="order.html" class="profile-menu-item">
+                <i class="fas fa-motorcycle"></i>
+                <span>Pesan Antar</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="#" class="profile-menu-item" id="myOrdersBtn">
+                <i class="fas fa-history"></i>
+                <span>Riwayat Pesanan</span>
+                <span class="badge" id="orderBadge">0</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="#" class="profile-menu-item" id="myTableBtn">
+                <i class="fas fa-chair"></i>
+                <span>Info Meja Saya</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="#" class="profile-menu-item" id="helpBtn">
+                <i class="fas fa-headset"></i>
+                <span>Bantuan</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <div class="profile-menu-item logout-item" id="logoutMenuItem">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </div>
+        </div>
+        
+        <div class="profile-footer">
+            <p>Cafe IronColol v1.0</p>
+            <p>© 2024 All rights reserved</p>
+        </div>
+    </div>
 
     <!-- Table Info Bar -->
     <div id="tableInfoBar" class="table-info-bar" style="display: none;">
@@ -270,6 +507,19 @@
             </h2>
             <div id="manualTableList" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin: 1.5rem 0;">
                 <div class="text-center">Memuat daftar meja...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Orders Modal -->
+    <div id="myOrdersModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; max-height: 80vh;">
+            <span class="close-orders">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 1rem;">
+                <i class="fas fa-history"></i> Riwayat Pesanan Saya
+            </h2>
+            <div id="ordersHistoryList" style="max-height: 60vh; overflow-y: auto;">
+                <div class="text-center">Memuat pesanan...</div>
             </div>
         </div>
     </div>
