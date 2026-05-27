@@ -190,6 +190,32 @@ app.post('/api/admin/login', (req, res) => {
     }
 });
 
+// ============ USER AUTH ============
+app.post('/api/user/login', (req, res) => {
+    const { phone } = req.body;
+    
+    if (!phone || phone.length < 10) {
+        return res.status(400).json({ success: false, error: 'Nomor telepon tidak valid!' });
+    }
+    
+    // Generate simple token
+    const token = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 10);
+    
+    res.json({
+        success: true,
+        token: token,
+        phone: phone,
+        message: 'Login berhasil'
+    });
+});
+
+// Get user orders by phone
+app.get('/api/user/orders/:phone', (req, res) => {
+    const db = readDB();
+    const userOrders = db.orders.filter(o => o.customerPhone === req.params.phone);
+    res.json(userOrders);
+});
+
 // ============ PRODUCT ROUTES ============
 app.get('/api/products', (req, res) => {
     try {
@@ -314,7 +340,8 @@ app.post('/api/orders', (req, res) => {
         tableNumber: req.body.tableNumber || null,
         note: req.body.note || null,
         paymentMethod: req.body.paymentMethod || null,
-        paymentStatus: req.body.paymentStatus || 'pending'
+        paymentStatus: req.body.paymentStatus || 'pending',
+        type: req.body.type || 'dine_in'
     };
     db.orders.push(newOrder);
     writeDB(db);

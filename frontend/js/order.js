@@ -1,6 +1,65 @@
 // API Configuration
 const API_URL = window.location.origin || 'http://localhost:3000';
 
+// Check if user is logged in
+function checkLoginStatus() {
+    const userPhone = localStorage.getItem('userPhone');
+    const userName = localStorage.getItem('userName');
+    
+    if (userPhone) {
+        // User is logged in
+        document.getElementById('loginWarning').style.display = 'none';
+        document.getElementById('orderContent').style.display = 'block';
+        document.getElementById('displayPhone').textContent = userPhone;
+        
+        // Pre-fill name if exists
+        if (userName) {
+            document.getElementById('customerName').value = userName;
+        }
+        
+        loadCartForOrder();
+    } else {
+        // User not logged in
+        document.getElementById('loginWarning').style.display = 'block';
+        document.getElementById('orderContent').style.display = 'none';
+    }
+}
+
+// Login with phone number
+function loginWithPhone() {
+    const phone = document.getElementById('loginPhone').value.trim();
+    
+    if (!phone) {
+        showToast('Nomor telepon harus diisi!', true);
+        return;
+    }
+    
+    if (phone.length < 10 || phone.length > 13) {
+        showToast('Nomor telepon tidak valid!', true);
+        return;
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('userPhone', phone);
+    localStorage.setItem('userLoginTime', new Date().toISOString());
+    
+    showToast('Login berhasil! Selamat datang kembali.');
+    
+    // Reload page to show order content
+    checkLoginStatus();
+}
+
+// Logout
+function logoutUser() {
+    if (confirm('Yakin ingin logout?')) {
+        localStorage.removeItem('userPhone');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userLoginTime');
+        showToast('Logout berhasil');
+        checkLoginStatus();
+    }
+}
+
 // Load cart and display
 function loadCartForOrder() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
@@ -53,21 +112,39 @@ function showToast(message, isError = false) {
     setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
+// Convert file to base64
+function convertToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
 // Proceed to payment
 document.getElementById('proceedToPaymentBtn')?.addEventListener('click', () => {
     const customerName = document.getElementById('customerName').value.trim();
-    const customerPhone = document.getElementById('customerPhone').value.trim();
     const customerAddress = document.getElementById('customerAddress').value.trim();
+    const userPhone = localStorage.getItem('userPhone');
     
-    if (!customerName || !customerPhone || !customerAddress) {
-        showToast('Harap isi semua data pemesan!', true);
+    if (!customerName) {
+        showToast('Nama harus diisi!', true);
         return;
     }
     
-    // Save customer data
+    if (!customerAddress) {
+        showToast('Alamat harus diisi!', true);
+        return;
+    }
+    
+    // Save customer name
+    localStorage.setItem('userName', customerName);
+    
+    // Save order customer data
     localStorage.setItem('orderCustomer', JSON.stringify({
         name: customerName,
-        phone: customerPhone,
+        phone: userPhone,
         address: customerAddress,
         note: document.getElementById('orderNote').value
     }));
@@ -129,8 +206,6 @@ document.querySelectorAll('.payment-option-btn').forEach(btn => {
         
         paymentDetailContent.innerHTML = content;
         paymentDetailModal.style.display = 'flex';
-        
-        // Store selected method
         paymentDetailModal.dataset.method = method;
     });
 });
@@ -141,6 +216,7 @@ document.getElementById('confirmPaymentDetailBtn')?.addEventListener('click', as
     const method = modal.dataset.method;
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const customer = JSON.parse(localStorage.getItem('orderCustomer') || '{}');
+    const userPhone = localStorage.getItem('userPhone');
     
     if (cart.length === 0) {
         showToast('Keranjang kosong!', true);
@@ -161,7 +237,7 @@ document.getElementById('confirmPaymentDetailBtn')?.addEventListener('click', as
         items: cart,
         total: total,
         customerName: customer.name,
-        customerPhone: customer.phone,
+        customerPhone: userPhone,
         customerAddress: customer.address,
         note: customer.note || '',
         paymentMethod: method === 'cod' ? 'COD (Bayar di Tempat)' : (method === 'qris' ? 'QRIS' : 'Transfer Bank'),
@@ -180,6 +256,8 @@ document.getElementById('confirmPaymentDetailBtn')?.addEventListener('click', as
         });
         
         if (response.ok) {
+            const result = await response.json();
+            
             // Clear cart and customer data
             localStorage.removeItem('cart');
             localStorage.removeItem('orderCustomer');
@@ -200,16 +278,6 @@ document.getElementById('confirmPaymentDetailBtn')?.addEventListener('click', as
         showToast('Error: ' + error.message, true);
     }
 });
-
-// Helper function to convert file to base64
-function convertToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-}
 
 // Close modals
 document.querySelectorAll('.close-payment, .close-detail').forEach(btn => {
@@ -232,8 +300,19 @@ window.onclick = (event) => {
     }
 };
 
+// Event listeners
+document.getElementById('loginPhoneBtn')?.addEventListener('click', loginWithPhone);
+document.getElementById('logoutBtn')?.addEventListener('click', logoutUser);
+
+// Enter key for login
+document.getElementById('loginPhone')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        loginWithPhone();
+    }
+});
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadCartForOrder();
     updateCartCount();
+    checkLoginStatus();
 });

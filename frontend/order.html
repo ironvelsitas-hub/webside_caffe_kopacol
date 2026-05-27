@@ -43,6 +43,30 @@
             padding: 2rem;
             color: #999;
         }
+        /* Login Modal Styles */
+        .login-required {
+            text-align: center;
+            padding: 2rem;
+            background: #fef3c7;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+        }
+        .login-required i {
+            font-size: 3rem;
+            color: #f59e0b;
+        }
+        .phone-input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .phone-input-group input {
+            flex: 1;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
         @media (max-width: 768px) {
             .order-container {
                 grid-template-columns: 1fr;
@@ -78,49 +102,62 @@
         <div class="container">
             <h1 style="text-align: center; margin-bottom: 2rem;">Pesan Antar</h1>
             
-            <div class="order-container">
-                <!-- Form Informasi Customer -->
-                <div class="order-info">
-                    <h2><i class="fas fa-user"></i> Informasi Pemesan</h2>
-                    <form id="deliveryForm">
-                        <div class="form-group">
-                            <label>Nama Lengkap *</label>
-                            <input type="text" id="customerName" required placeholder="Masukkan nama lengkap">
-                        </div>
-                        <div class="form-group">
-                            <label>Nomor Telepon *</label>
-                            <input type="tel" id="customerPhone" required placeholder="081234567890">
-                        </div>
-                        <div class="form-group">
-                            <label>Alamat Lengkap *</label>
-                            <textarea id="customerAddress" rows="3" required placeholder="Masukkan alamat lengkap"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Catatan (opsional)</label>
-                            <textarea id="orderNote" rows="2" placeholder="Catatan untuk pesanan"></textarea>
-                        </div>
-                    </form>
+            <!-- Login Required Warning -->
+            <div id="loginWarning" class="login-required" style="display: none;">
+                <i class="fas fa-phone-alt"></i>
+                <h3>Login Diperlukan</h3>
+                <p>Silakan login menggunakan nomor telepon Anda untuk melanjutkan pemesanan</p>
+                <div class="phone-input-group">
+                    <input type="tel" id="loginPhone" placeholder="Contoh: 081234567890">
+                    <button class="btn btn-primary" id="loginPhoneBtn">Login</button>
                 </div>
+            </div>
 
-                <!-- Ringkasan Pesanan -->
-                <div class="order-cart">
-                    <h2><i class="fas fa-shopping-cart"></i> Ringkasan Pesanan</h2>
-                    <div id="cartItemsList">
-                        <div class="empty-cart">
-                            <i class="fas fa-shopping-cart"></i>
-                            <p>Keranjang masih kosong</p>
-                            <a href="menu.html" class="btn btn-primary" style="margin-top: 1rem;">Pesan Sekarang</a>
+            <div id="orderContent" style="display: none;">
+                <div class="order-container">
+                    <!-- Form Informasi Customer -->
+                    <div class="order-info">
+                        <h2><i class="fas fa-user"></i> Informasi Pemesan</h2>
+                        <div id="userInfoDisplay" style="background: #e3f2fd; padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                            <p><i class="fas fa-phone"></i> <strong id="displayPhone"></strong></p>
+                            <button class="btn-logout" id="logoutBtn" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.8rem;">Ganti Nomor</button>
                         </div>
+                        <form id="deliveryForm">
+                            <div class="form-group">
+                                <label>Nama Lengkap *</label>
+                                <input type="text" id="customerName" required placeholder="Masukkan nama lengkap">
+                            </div>
+                            <div class="form-group">
+                                <label>Alamat Lengkap *</label>
+                                <textarea id="customerAddress" rows="3" required placeholder="Masukkan alamat lengkap"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Catatan (opsional)</label>
+                                <textarea id="orderNote" rows="2" placeholder="Catatan untuk pesanan"></textarea>
+                            </div>
+                        </form>
                     </div>
-                    <div id="cartSummary" style="display: none;">
-                        <div id="cartItems"></div>
-                        <div class="cart-total-order">
-                            <span>Total: </span>
-                            <span id="cartTotal">Rp 0</span>
+
+                    <!-- Ringkasan Pesanan -->
+                    <div class="order-cart">
+                        <h2><i class="fas fa-shopping-cart"></i> Ringkasan Pesanan</h2>
+                        <div id="cartItemsList">
+                            <div class="empty-cart">
+                                <i class="fas fa-shopping-cart"></i>
+                                <p>Keranjang masih kosong</p>
+                                <a href="menu.html" class="btn btn-primary" style="margin-top: 1rem;">Pesan Sekarang</a>
+                            </div>
                         </div>
-                        <button class="btn btn-primary" id="proceedToPaymentBtn" style="width: 100%; margin-top: 1rem;">
-                            <i class="fas fa-credit-card"></i> Lanjut ke Pembayaran
-                        </button>
+                        <div id="cartSummary" style="display: none;">
+                            <div id="cartItems"></div>
+                            <div class="cart-total-order">
+                                <span>Total: </span>
+                                <span id="cartTotal">Rp 0</span>
+                            </div>
+                            <button class="btn btn-primary" id="proceedToPaymentBtn" style="width: 100%; margin-top: 1rem;">
+                                <i class="fas fa-credit-card"></i> Lanjut ke Pembayaran
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -47,14 +47,50 @@ function loadCart() {
                 <span>Total:</span>
                 <span>Rp ${calculateTotal(cart).toLocaleString()}</span>
             </div>
-            <button class="checkout-btn" onclick="showPaymentMethods()">
-                <i class="fas fa-credit-card"></i> Lanjut ke Pembayaran
-            </button>
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="checkout-btn" onclick="showPaymentMethods()" style="flex: 1;">
+                    <i class="fas fa-credit-card"></i> Pesan di Tempat
+                </button>
+                <button class="checkout-btn" onclick="proceedToDelivery()" style="flex: 1; background: #10b981;">
+                    <i class="fas fa-motorcycle"></i> Pesan Antar
+                </button>
+            </div>
         </div>
     `;
     
     if (paymentSection) paymentSection.style.display = 'none';
     updateCartCount();
+}
+
+// ============ FUNGSI PROCEED TO DELIVERY DENGAN CEK LOGIN ============
+function proceedToDelivery() {
+    const userPhone = localStorage.getItem('userPhone');
+    
+    if (!userPhone) {
+        showToast('Silakan login terlebih dahulu untuk pesan antar!', true);
+        // Redirect ke halaman order yang memiliki form login
+        window.location.href = 'order.html';
+        return false;
+    }
+    
+    // Jika sudah login, redirect ke halaman order dengan data keranjang
+    // Simpan data bahwa ini adalah pesanan antar
+    localStorage.setItem('orderType', 'delivery');
+    window.location.href = 'order.html';
+    return true;
+}
+
+// Check if user is logged in for delivery
+function checkDeliveryLogin() {
+    const userPhone = localStorage.getItem('userPhone');
+    const orderType = localStorage.getItem('orderType');
+    
+    if (orderType === 'delivery' && !userPhone) {
+        showToast('Silakan login terlebih dahulu untuk pesan antar!', true);
+        window.location.href = 'order.html';
+        return false;
+    }
+    return true;
 }
 
 function calculateTotal(cart) {
@@ -63,6 +99,9 @@ function calculateTotal(cart) {
 
 // Show payment methods
 function showPaymentMethods() {
+    // Set order type to dine in
+    localStorage.setItem('orderType', 'dine_in');
+    
     const paymentSection = document.getElementById('paymentSection');
     if (paymentSection) {
         paymentSection.style.display = 'block';
@@ -111,6 +150,7 @@ window.copyToClipboard = function(text) {
 // Konfirmasi pembayaran
 document.getElementById('confirmPaymentBtn')?.addEventListener('click', async () => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const orderType = localStorage.getItem('orderType') || 'dine_in';
     
     if (cart.length === 0) {
         showToast('Keranjang kosong!', true);
@@ -128,9 +168,11 @@ document.getElementById('confirmPaymentBtn')?.addEventListener('click', async ()
         return;
     }
     
-    // Get table number from localStorage
+    // Get customer data
     const tableNumber = localStorage.getItem('tableNumber');
     const customerName = localStorage.getItem('customerName') || 'Customer';
+    const userPhone = localStorage.getItem('userPhone');
+    const userAddress = localStorage.getItem('userAddress') || '';
     
     // Create order data
     const orderData = {
@@ -139,8 +181,11 @@ document.getElementById('confirmPaymentBtn')?.addEventListener('click', async ()
         status: 'pending',
         paymentMethod: selectedPaymentMethod,
         paymentStatus: 'waiting_confirmation',
-        tableNumber: tableNumber,
-        customerName: customerName,
+        tableNumber: orderType === 'dine_in' ? tableNumber : null,
+        customerName: orderType === 'delivery' ? (localStorage.getItem('userName') || customerName) : customerName,
+        customerPhone: orderType === 'delivery' ? userPhone : null,
+        customerAddress: orderType === 'delivery' ? (localStorage.getItem('customerAddress') || userAddress) : null,
+        type: orderType,
         createdAt: new Date().toISOString(),
         paymentProof: paymentProof.name
     };
@@ -168,6 +213,8 @@ document.getElementById('confirmPaymentBtn')?.addEventListener('click', async ()
                 // Clear cart
                 localStorage.removeItem('cart');
                 localStorage.removeItem('tableNumber');
+                localStorage.removeItem('orderType');
+                localStorage.removeItem('customerAddress');
                 
                 // Show success modal
                 document.getElementById('successModal').style.display = 'flex';
@@ -267,10 +314,11 @@ window.onclick = (event) => {
     }
 };
 
-// Initialize
+// Check for delivery login on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadCart();
     updateCartCount();
+    checkDeliveryLogin();
     
     // Setup QR code refresh
     const refreshQR = () => {
