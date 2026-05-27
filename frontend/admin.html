@@ -8,24 +8,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: #f5f7fa;
-        }
+        /* Admin Panel Specific Styles */
         .admin-container {
             display: flex;
             min-height: 100vh;
         }
         .admin-sidebar {
-            width: 260px;
-            background: #1a1a2e;
+            width: 280px;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
             color: white;
             padding: 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
         }
         .admin-logo {
             display: flex;
@@ -42,8 +38,8 @@
             align-items: center;
             justify-content: space-between;
             padding: 0.8rem;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
             margin-bottom: 1.5rem;
         }
         .logout-btn {
@@ -52,6 +48,10 @@
             color: #ef4444;
             cursor: pointer;
             font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover {
+            transform: scale(1.1);
         }
         .admin-nav {
             display: flex;
@@ -59,27 +59,33 @@
             gap: 0.5rem;
         }
         .admin-nav-btn {
+            width: 100%;
             padding: 0.8rem 1rem;
-            background: none;
+            background: rgba(255,255,255,0.05);
             border: none;
             color: white;
             text-align: left;
             cursor: pointer;
-            border-radius: 10px;
+            border-radius: 12px;
             transition: all 0.3s;
             display: flex;
             align-items: center;
             gap: 0.8rem;
-            width: 100%;
+            font-size: 0.9rem;
+        }
+        .admin-nav-btn i {
+            width: 1.5rem;
+            font-size: 1.1rem;
         }
         .admin-nav-btn:hover,
         .admin-nav-btn.active {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: translateX(5px);
         }
         .admin-main {
             flex: 1;
             padding: 1.5rem;
-            background: #f5f7fa;
+            background: #f1f5f9;
             overflow-x: auto;
         }
         .admin-header {
@@ -92,70 +98,79 @@
         }
         .admin-header h2 {
             font-size: 1.3rem;
-            color: #333;
+            color: #0f172a;
+            margin: 0;
         }
         .btn-primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 0.6rem 1.2rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 50px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s;
         }
         .btn-primary:hover {
-            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
         }
         .btn-success {
-            background: #10b981;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
-        .btn-success:hover {
-            background: #059669;
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
+        
+        /* Products Table */
         .products-table {
             background: white;
-            border-radius: 15px;
+            border-radius: 20px;
             overflow-x: auto;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
         .products-table table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 600px;
+            min-width: 650px;
         }
         .products-table th,
         .products-table td {
             padding: 1rem;
             text-align: left;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #e2e8f0;
         }
         .products-table th {
-            background: #f8f9fa;
+            background: #f8fafc;
             font-weight: 600;
-            color: #333;
+            color: #0f172a;
         }
         .product-image-cell {
             width: 50px;
             height: 50px;
             object-fit: cover;
-            border-radius: 8px;
+            border-radius: 10px;
         }
         .action-btn {
             padding: 0.4rem 0.8rem;
             margin: 0 0.2rem;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 0.8rem;
+            transition: all 0.3s;
         }
         .edit-btn { background: #667eea; color: white; }
         .delete-btn { background: #ef4444; color: white; }
-        .edit-btn:hover, .delete-btn:hover {
-            opacity: 0.9;
+        .action-btn:hover {
+            transform: scale(1.05);
         }
+        
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -163,56 +178,64 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
         .modal-content {
             background: white;
-            border-radius: 20px;
+            border-radius: 24px;
             padding: 2rem;
             max-width: 500px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
             position: relative;
+            animation: fadeInScale 0.3s ease;
         }
         .close {
             position: absolute;
-            right: 1rem;
-            top: 1rem;
+            right: 1.2rem;
+            top: 1.2rem;
             font-size: 1.5rem;
             cursor: pointer;
-            color: #999;
+            color: #94a3b8;
+            transition: color 0.3s;
         }
         .close:hover {
-            color: #333;
+            color: #ef4444;
         }
+        
+        /* Form */
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            color: #0f172a;
         }
         .form-group input,
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 0.7rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
             font-family: inherit;
             font-size: 0.9rem;
+            transition: all 0.3s;
         }
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
         .image-preview {
             margin-top: 0.5rem;
@@ -220,27 +243,29 @@
         }
         .image-preview img {
             max-width: 100px;
-            max-height: 100px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
             padding: 5px;
         }
+        
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 2rem;
             right: 2rem;
-            background: #333;
+            background: #0f172a;
             color: white;
             padding: 0.8rem 1.5rem;
             border-radius: 50px;
             z-index: 2000;
             display: none;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         .toast.show { display: block; }
         .text-center { text-align: center; }
         
-        /* QR Management */
+        /* QR Grid */
         .qr-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -248,35 +273,30 @@
         }
         .qr-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 20px;
             padding: 1rem;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
         }
         .qr-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
         .qr-card img {
             width: 150px;
             height: 150px;
             margin: 0.5rem auto;
+            border-radius: 12px;
         }
         .table-number-badge {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 0.3rem 1rem;
-            border-radius: 20px;
+            border-radius: 50px;
             display: inline-block;
             margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-        .qr-actions {
-            display: flex;
-            gap: 0.5rem;
-            justify-content: center;
-            margin-top: 0.5rem;
-            flex-wrap: wrap;
+            font-size: 0.8rem;
         }
         
         /* Tables Grid */
@@ -287,14 +307,16 @@
         }
         .table-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 16px;
             padding: 1rem;
             text-align: center;
-            transition: transform 0.3s;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
         }
         .table-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
         .table-card i {
             font-size: 2rem;
@@ -314,10 +336,14 @@
         /* Order Card */
         .order-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 16px;
             padding: 1rem;
             margin-bottom: 1rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        .order-card:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
         }
         .order-header {
             display: flex;
@@ -327,8 +353,9 @@
         }
         .order-status {
             padding: 0.2rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
         .status-pending { background: #fef3c7; color: #d97706; }
         .status-processing { background: #dbeafe; color: #2563eb; }
@@ -349,23 +376,50 @@
             font-size: 0.8rem;
         }
         
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
         @media (max-width: 768px) {
-            .admin-container { flex-direction: column; }
-            .admin-sidebar { width: 100%; }
-            .qr-grid { grid-template-columns: 1fr; }
-            .tables-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .admin-container {
+                flex-direction: column;
+            }
+            .admin-sidebar {
+                width: 100%;
+                height: auto;
+                position: sticky;
+                top: 0;
+            }
+            .admin-nav {
+                flex-direction: row;
+                overflow-x: auto;
+                gap: 0.5rem;
+            }
+            .admin-nav-btn {
+                white-space: nowrap;
+                width: auto;
+            }
+            .qr-grid {
+                grid-template-columns: 1fr;
+            }
+            .tables-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
         }
     </style>
 </head>
 <body>
     <!-- Login Modal -->
     <div id="loginModal" class="modal" style="display: flex;">
-        <div class="modal-content">
-            <h2 style="text-align: center; margin-bottom: 1.5rem;"><i class="fas fa-lock"></i> Admin Login</h2>
+        <div class="modal-content" style="max-width: 350px;">
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-lock"></i> Admin Login
+            </h2>
             <form id="loginForm">
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="username" required placeholder="admin">
+                    <input type="text" id="username" required placeholder="admin" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
@@ -429,11 +483,7 @@
                                 </tr>
                             </thead>
                             <tbody id="productsTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center">
-                                        <i class="fas fa-spinner fa-spin"></i> Memuat produk...
-                                    </td>
-                                </tr>
+                                <tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -502,9 +552,6 @@
         </div>
     </div>
 
-    <!-- Hidden div untuk print struk -->
-    <div id="receiptPrintArea" style="display: none;"></div>
-
     <!-- Product Modal -->
     <div id="productModal" class="modal">
         <div class="modal-content">
@@ -515,7 +562,6 @@
                 <div class="form-group">
                     <label>Nama Produk *</label>
                     <input type="text" id="productName" required placeholder="Contoh: Nasi Padang" autocomplete="off">
-                    <small style="color: #999;">Masukkan nama produk</small>
                 </div>
                 <div class="form-group">
                     <label>Kategori</label>
@@ -528,7 +574,6 @@
                 <div class="form-group">
                     <label>Harga (Rp) *</label>
                     <input type="number" id="productPrice" required placeholder="25000" min="0" step="1000">
-                    <small style="color: #999;">Harga dalam Rupiah</small>
                 </div>
                 <div class="form-group">
                     <label>Deskripsi</label>
@@ -536,16 +581,11 @@
                 </div>
                 <div class="form-group">
                     <label>Gambar Produk</label>
-                    <input type="file" id="productImage" accept="image/*">
-                    <small style="color: #999; display: block; margin-top: 5px;">Upload gambar produk (max 5MB)</small>
-                    <div class="image-preview" id="imagePreviewContainer" style="display:none; margin-top: 10px;">
-                        <img id="imagePreview" src="" style="max-width: 100px; border-radius: 8px;">
-                        <br>
-                        <button type="button" onclick="removeImagePreview()" style="margin-top: 5px; background: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 5px; cursor: pointer; font-size: 11px;">Hapus Preview</button>
-                    </div>
+                    <input type="url" id="productImage" placeholder="https://...">
+                    <small style="color: #666; display: block; margin-top: 5px;">Masukkan URL gambar produk</small>
                 </div>
-                <button type="submit" class="btn-primary" style="width:100%; margin-top: 1rem;">
-                    <i class="fas fa-save"></i> Simpan Produk
+                <button type="submit" class="btn-primary" style="width:100%">
+                    <i class="fas fa-save"></i> Simpan
                 </button>
             </form>
         </div>
@@ -553,19 +593,15 @@
 
     <div id="toast" class="toast"></div>
 
-    <script>
-    // Fungsi untuk menghapus preview gambar
-    function removeImagePreview() {
-        const previewContainer = document.getElementById('imagePreviewContainer');
-        const imageInput = document.getElementById('productImage');
-        if (previewContainer) previewContainer.style.display = 'none';
-        if (imageInput) imageInput.value = '';
-    }
-    
-    // Fungsi untuk removeImagePreview global
-    window.removeImagePreview = removeImagePreview;
-    </script>
-
     <script src="js/admin.js"></script>
+    <script>
+        // Remove image preview function
+        function removeImagePreview() {
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const imageInput = document.getElementById('productImage');
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (imageInput) imageInput.value = '';
+        }
+    </script>
 </body>
 </html>
