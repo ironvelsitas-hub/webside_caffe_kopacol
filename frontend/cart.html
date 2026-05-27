@@ -3,137 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Keranjang & Pembayaran - Cafe IronColol</title>
+    <title>Cafe IronColol - Premium Coffee & Dining</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .payment-methods {
-            margin-top: 1.5rem;
-        }
-        .payment-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #333;
-        }
-        .payment-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .payment-option {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .payment-option:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        .payment-option.selected {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-        .payment-option i {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-        .payment-option .qris-icon { color: #10b981; }
-        .payment-option .bca-icon { color: #0055a4; }
-        .payment-option .bri-icon { color: #0066b3; }
-        .payment-option .dana-icon { color: #2b7a3e; }
-        .payment-option .ovo-icon { color: #4a148c; }
-        .payment-option .name {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        .payment-detail {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-top: 1rem;
-            display: none;
-        }
-        .payment-detail.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-        .bank-info, .ewallet-info {
-            text-align: center;
-        }
-        .bank-number, .ewallet-number {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #667eea;
-            letter-spacing: 2px;
-            margin: 1rem 0;
-            padding: 0.5rem;
-            background: white;
-            border-radius: 10px;
-            display: inline-block;
-        }
-        .copy-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-left: 0.5rem;
-        }
-        .qris-code {
-            text-align: center;
-            margin: 1rem 0;
-        }
-        .qris-code img {
-            width: 200px;
-            height: 200px;
-            border: 1px solid #ddd;
-            border-radius: 15px;
-            padding: 10px;
-            background: white;
-        }
-        .confirm-payment {
-            width: 100%;
-            padding: 1rem;
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: all 0.3s;
-        }
-        .confirm-payment:hover {
-            background: #059669;
-            transform: scale(1.02);
-        }
-        .upload-proof {
-            margin-top: 1rem;
-            padding: 1rem;
-            border: 1px dashed #ddd;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .upload-proof input {
-            margin-top: 0.5rem;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
 </head>
 <body>
+    <!-- Navbar -->
     <nav class="navbar">
         <div class="nav-container">
             <div class="logo">
@@ -141,10 +17,17 @@
                 <span>IronColol</span>
             </div>
             <ul class="nav-menu">
-                <li><a href="index.html" class="nav-link">Beranda</a></li>
+                <li><a href="index.html" class="nav-link active">Beranda</a></li>
                 <li><a href="menu.html" class="nav-link">Menu</a></li>
+                <li><a href="order.html" class="nav-link">Pesan Antar</a></li>
+                <li><a href="#about" class="nav-link">Tentang</a></li>
             </ul>
             <div class="nav-icons">
+                <div class="profile-avatar-btn" id="profileAvatarBtn">
+                    <div class="user-avatar" id="userAvatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
                 <a href="cart.html" class="cart-icon">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count">0</span>
@@ -156,147 +39,198 @@
         </div>
     </nav>
 
-    <section class="cart-page">
-        <div class="container">
-            <h1><i class="fas fa-shopping-cart"></i> Keranjang Belanja</h1>
-            <div id="cartContent">
-                <div class="cart-empty">
-                    <i class="fas fa-shopping-cart"></i>
-                    <p>Keranjang masih kosong</p>
-                    <a href="menu.html" class="btn btn-primary">Mulai Belanja</a>
-                </div>
+    <!-- Profile Sidebar -->
+    <div class="profile-overlay" id="profileOverlay"></div>
+    <div class="profile-sidebar" id="profileSidebar">
+        <div class="profile-header">
+            <button class="profile-close" id="closeProfileBtn">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="profile-avatar">
+                <i class="fas fa-user-circle"></i>
             </div>
-            
-            <div id="paymentSection" style="display: none;">
-                <div class="payment-methods">
-                    <div class="payment-title">
-                        <i class="fas fa-credit-card"></i> Pilih Metode Pembayaran
-                    </div>
-                    <div class="payment-options">
-                        <div class="payment-option" data-method="qris">
-                            <i class="fas fa-qrcode qris-icon"></i>
-                            <div class="name">QRIS</div>
-                            <small>Scan QR Code</small>
-                        </div>
-                        <div class="payment-option" data-method="bca">
-                            <i class="fas fa-university bca-icon"></i>
-                            <div class="name">BCA</div>
-                            <small>Transfer Bank</small>
-                        </div>
-                        <div class="payment-option" data-method="bri">
-                            <i class="fas fa-university bri-icon"></i>
-                            <div class="name">BRI</div>
-                            <small>Transfer Bank</small>
-                        </div>
-                        <div class="payment-option" data-method="dana">
-                            <i class="fas fa-wallet dana-icon"></i>
-                            <div class="name">DANA</div>
-                            <small>E-Wallet</small>
-                        </div>
-                        <div class="payment-option" data-method="ovo">
-                            <i class="fas fa-mobile-alt ovo-icon"></i>
-                            <div class="name">OVO</div>
-                            <small>E-Wallet</small>
-                        </div>
-                    </div>
+            <div class="profile-name" id="profileName">Guest User</div>
+            <div class="profile-phone" id="profilePhone">Not logged in</div>
+        </div>
+        
+        <div class="profile-menu">
+            <a href="menu.html" class="profile-menu-item">
+                <i class="fas fa-utensils"></i>
+                <span>Menu Pesanan</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="order.html" class="profile-menu-item">
+                <i class="fas fa-motorcycle"></i>
+                <span>Pesan Antar</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="#" class="profile-menu-item" id="myOrdersBtn">
+                <i class="fas fa-history"></i>
+                <span>Riwayat Pesanan</span>
+                <span class="badge" id="orderBadge">0</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="#" class="profile-menu-item" id="myTableBtn">
+                <i class="fas fa-chair"></i>
+                <span>Info Meja Saya</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <a href="#" class="profile-menu-item" id="helpBtn">
+                <i class="fas fa-headset"></i>
+                <span>Bantuan</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </a>
+            <div class="profile-menu-item logout-item" id="logoutMenuItem">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+                <i class="fas fa-chevron-right" style="font-size: 0.7rem;"></i>
+            </div>
+        </div>
+        
+        <div class="profile-footer">
+            <p>Cafe IronColol v1.0</p>
+            <p>© 2024 All rights reserved</p>
+        </div>
+    </div>
 
-                    <!-- QRIS Payment Detail -->
-                    <div id="qrisDetail" class="payment-detail">
-                        <div class="qris-code">
-                            <h3>Scan QR Code untuk Membayar</h3>
-                            <img id="qrisImage" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=QRIS_IRONCOLOL_CAFE_2024" alt="QRIS Code">
-                            <p class="qr-info">Gunakan aplikasi mobile banking atau e-wallet yang mendukung QRIS</p>
-                        </div>
-                    </div>
+    <!-- Table Info Bar -->
+    <div id="tableInfoBar" class="table-info-bar" style="display: none;">
+        <span><i class="fas fa-chair"></i> Anda sedang di</span>
+        <strong id="currentTableNumber">Meja 0</strong>
+        <button class="change-table-btn" onclick="changeTable()">
+            <i class="fas fa-sync-alt"></i> Ganti Meja
+        </button>
+    </div>
 
-                    <!-- BCA Payment Detail -->
-                    <div id="bcaDetail" class="payment-detail">
-                        <div class="bank-info">
-                            <h3><i class="fas fa-university"></i> Bank BCA</h3>
-                            <div class="bank-number">
-                                123 456 7890
-                                <button class="copy-btn" onclick="copyToClipboard('1234567890')">Salin</button>
-                            </div>
-                            <p>a.n Cafe IronColol</p>
-                            <p>Kode Bank: 014</p>
-                            <p>Cabang: Jakarta Pusat</p>
-                        </div>
-                    </div>
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1 class="animate-slideDown">Welcome to <span class="highlight">IronColol</span></h1>
+            <p class="animate-slideUp">Scan QR Code di meja untuk mulai memesan</p>
+            <div class="hero-buttons">
+                <button class="btn btn-primary" id="scanQRBtn">
+                    <i class="fas fa-qrcode"></i> Scan QR Meja Sekarang
+                </button>
+                <a href="menu.html" class="btn btn-secondary">Lihat Menu</a>
+            </div>
+        </div>
+        <div class="hero-wave">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                <path fill="#ffffff" fill-opacity="1" d="M0,192L48,197.3C96,203,192,213,288,208C384,203,480,181,576,181.3C672,181,768,203,864,208C960,213,1056,203,1152,186.7C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            </svg>
+        </div>
+    </section>
 
-                    <!-- BRI Payment Detail -->
-                    <div id="briDetail" class="payment-detail">
-                        <div class="bank-info">
-                            <h3><i class="fas fa-university"></i> Bank BRI</h3>
-                            <div class="bank-number">
-                                0987 6543 210
-                                <button class="copy-btn" onclick="copyToClipboard('09876543210')">Salin</button>
-                            </div>
-                            <p>a.n Cafe IronColol</p>
-                            <p>Kode Bank: 002</p>
-                            <p>Cabang: Jakarta Selatan</p>
-                        </div>
-                    </div>
-
-                    <!-- DANA Payment Detail -->
-                    <div id="danaDetail" class="payment-detail">
-                        <div class="ewallet-info">
-                            <h3><i class="fas fa-wallet"></i> DANA</h3>
-                            <div class="ewallet-number">
-                                0812 4613 5710
-                                <button class="copy-btn" onclick="copyToClipboard('081246135710')">Salin</button>
-                            </div>
-                            <p>Scan QR Code DANA</p>
-                            <div class="qris-code">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=DANA_IRONCOLOL_081246135710" alt="DANA QR Code">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- OVO Payment Detail -->
-                    <div id="ovoDetail" class="payment-detail">
-                        <div class="ewallet-info">
-                            <h3><i class="fas fa-mobile-alt"></i> OVO</h3>
-                            <div class="ewallet-number">
-                                0812 4613 5710
-                                <button class="copy-btn" onclick="copyToClipboard('081246135710')">Salin</button>
-                            </div>
-                            <p>Scan QR Code OVO</p>
-                            <div class="qris-code">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=OVO_IRONCOLOL_081246135710" alt="OVO QR Code">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Upload Bukti Pembayaran -->
-                    <div class="upload-proof">
-                        <i class="fas fa-upload"></i>
-                        <p>Upload Bukti Pembayaran</p>
-                        <input type="file" id="paymentProof" accept="image/*">
-                        <small>Upload screenshot atau foto bukti transfer</small>
-                    </div>
-
-                    <button class="confirm-payment" id="confirmPaymentBtn">
-                        <i class="fas fa-check-circle"></i> Konfirmasi Pembayaran
-                    </button>
+    <!-- Features -->
+    <section class="features">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-card animate-fadeIn">
+                    <i class="fas fa-coffee"></i>
+                    <h3>Premium Coffee</h3>
+                    <p>Dari biji kopi pilihan terbaik</p>
+                </div>
+                <div class="feature-card animate-fadeIn" style="animation-delay: 0.2s">
+                    <i class="fas fa-utensils"></i>
+                    <h3>Delicious Food</h3>
+                    <p>Menu makanan berkualitas</p>
+                </div>
+                <div class="feature-card animate-fadeIn" style="animation-delay: 0.4s">
+                    <i class="fas fa-motorcycle"></i>
+                    <h3>Free Delivery</h3>
+                    <p>Gratis ongkir area tertentu</p>
+                </div>
+                <div class="feature-card animate-fadeIn" style="animation-delay: 0.6s">
+                    <i class="fas fa-qrcode"></i>
+                    <h3>QR Order</h3>
+                    <p>Scan & pesan dari meja</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Success Modal -->
-    <div id="successModal" class="modal">
-        <div class="modal-content" style="text-align: center; max-width: 350px;">
-            <i class="fas fa-check-circle" style="font-size: 4rem; color: #10b981; margin-bottom: 1rem;"></i>
-            <h2>Pesanan Berhasil!</h2>
-            <p>Pesanan Anda telah diterima. Silahkan tunggu konfirmasi dari kasir.</p>
-            <button class="btn btn-primary" onclick="window.location.href='index.html'" style="margin-top: 1rem;">
-                Kembali ke Beranda
-            </button>
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text animate-slideLeft">
+                    <h2>Tentang <span class="highlight">IronColol</span></h2>
+                    <p>IronColol adalah tempat di mana kopi premium bertemu dengan hidangan eksklusif. Kami menghadirkan pengalaman bersantap yang tak terlupakan dengan atmosfer modern dan pelayanan terbaik.</p>
+                    <div class="about-stats">
+                        <div class="stat">
+                            <h4>5+</h4>
+                            <p>Tahun Pengalaman</p>
+                        </div>
+                        <div class="stat">
+                            <h4>1000+</h4>
+                            <p>Pelanggan Puas</p>
+                        </div>
+                        <div class="stat">
+                            <h4>50+</h4>
+                            <p>Menu Variasi</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image animate-slideRight">
+                    <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?ixlib=rb-4.0.3" alt="Cafe Interior">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- QR Scanner Modal -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <span class="close">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 1rem;">
+                <i class="fas fa-qrcode"></i> Scan QR Code Meja
+            </h2>
+            
+            <div id="qr-reader" style="width: 100%; border-radius: 10px; overflow: hidden;"></div>
+            
+            <div id="qr-status" style="margin-top: 1rem; padding: 0.5rem; border-radius: 8px; text-align: center; background: #f0f0f0;">
+                <i class="fas fa-info-circle"></i> Arahkan kamera ke QR code meja
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <button id="manualTableBtn" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-keyboard"></i> Pilih Meja Manual
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Table Modal -->
+    <div id="manualTableModal" class="modal">
+        <div class="modal-content" style="max-width: 350px;">
+            <span class="close-manual">&times;</span>
+            <h2 style="text-align: center;">
+                <i class="fas fa-chair"></i> Pilih Nomor Meja
+            </h2>
+            <div id="manualTableList" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin: 1.5rem 0;">
+                <div class="text-center">Memuat daftar meja...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Orders Modal -->
+    <div id="myOrdersModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; max-height: 80vh;">
+            <span class="close-orders">&times;</span>
+            <h2 style="text-align: center; margin-bottom: 1rem;">
+                <i class="fas fa-history"></i> Riwayat Pesanan Saya
+            </h2>
+            <div id="ordersHistoryList" style="max-height: 60vh; overflow-y: auto;">
+                <div class="text-center">Memuat pesanan...</div>
+            </div>
         </div>
     </div>
 
     <div id="toast" class="toast"></div>
 
-    <script src="js/cart.js"></script>
+    <!-- Load html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
