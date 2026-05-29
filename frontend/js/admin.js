@@ -2,42 +2,58 @@
 const API_URL = window.location.origin || 'http://localhost:3000';
 let adminToken = null;
 
-// Login function
+// Login function - FIXED
 async function login() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
+    console.log('Attempting login with:', username);
+    
     try {
         const response = await fetch(`${API_URL}/api/admin/login`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({ username, password })
         });
         
-        const data = await response.json();
+        console.log('Response status:', response.status);
         
-        if (data.success) {
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (response.ok && data.success) {
             adminToken = data.token;
             localStorage.setItem('adminToken', adminToken);
             localStorage.setItem('adminUsername', username);
-            document.getElementById('loginModal').style.display = 'none';
-            document.getElementById('adminPanel').style.display = 'block';
-            document.getElementById('adminUsername').textContent = username;
-            showToast('Login berhasil!');
             
+            // Sembunyikan login modal
+            const loginModal = document.getElementById('loginModal');
+            const adminPanel = document.getElementById('adminPanel');
+            
+            if (loginModal) loginModal.style.display = 'none';
+            if (adminPanel) adminPanel.style.display = 'block';
+            
+            if (document.getElementById('adminUsername')) {
+                document.getElementById('adminUsername').textContent = username;
+            }
+            
+            showToast('Login berhasil! Selamat datang Admin');
+            
+            // Load data setelah login
             await loadProducts();
             await loadOrders();
             await loadTables();
             await loadQRManagement();
         } else {
-            showToast(data.error || 'Login gagal!', true);
+            showToast(data.error || 'Username atau password salah!', true);
         }
     } catch (error) {
         console.error('Login error:', error);
         showToast('Error: ' + error.message, true);
     }
 }
-
 // Logout
 function logout() {
     localStorage.removeItem('adminToken');

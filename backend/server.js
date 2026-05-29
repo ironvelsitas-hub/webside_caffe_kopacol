@@ -103,13 +103,25 @@ loadDatabase();
 // ============ ADMIN AUTH ============
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
+    console.log('Login attempt - Username:', username, 'Password:', password);
+    
+    // Cek kredensial
     if (username === 'admin' && password === 'admin123') {
-        res.json({ success: true, token: 'admin_token_' + Date.now() });
+        const token = 'admin_token_' + Date.now();
+        console.log('Login success, token:', token);
+        res.json({ 
+            success: true, 
+            token: token,
+            message: 'Login successful' 
+        });
     } else {
-        res.status(401).json({ success: false, error: 'Login gagal!' });
+        console.log('Login failed - Invalid credentials');
+        res.status(401).json({ 
+            success: false, 
+            error: 'Username atau password salah!' 
+        });
     }
 });
-
 // ============ PRODUCT ROUTES ============
 app.get('/api/products', (req, res) => {
     try {
@@ -342,6 +354,7 @@ app.listen(PORT, () => {
     console.log(`========================================`);
     console.log(`📱 Frontend: http://localhost:${PORT}`);
     console.log(`📡 API: http://localhost:${PORT}/api/products`);
+    console.log(`🔐 Admin Login: admin / admin123`);
     console.log(`💾 Database: ${DB_PATH}`);
     console.log(`========================================\n`);
 });
