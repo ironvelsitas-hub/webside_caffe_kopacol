@@ -25,7 +25,6 @@ async function login() {
             document.getElementById('adminUsername').textContent = username;
             showToast('Login berhasil!');
             
-            // Load semua data setelah login
             await loadProducts();
             await loadOrders();
             await loadTables();
@@ -51,13 +50,10 @@ function logout() {
 
 // ============ PRODUCT MANAGEMENT ============
 
-// Load products - FIXED
+// Load products
 async function loadProducts() {
     const tbody = document.getElementById('productsTableBody');
-    if (!tbody) {
-        console.error('productsTableBody not found');
-        return;
-    }
+    if (!tbody) return;
     
     tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...<\/td><\/tr>';
     
@@ -78,8 +74,8 @@ async function loadProducts() {
         tbody.innerHTML = products.map(product => `
             <tr>
                 <td><img src="${product.image || 'https://via.placeholder.com/50'}" class="product-image-cell" onerror="this.src='https://via.placeholder.com/50'"><\/td>
-                <td><strong>${escapeHtml(product.name || 'No Name')}</strong><\/td>
-                <td>${escapeHtml(product.category || '-')}<\/td>
+                <td><strong>${escapeHtml(product.name)}</strong><\/td>
+                <td>${escapeHtml(product.category)}<\/td>
                 <td>Rp ${(product.price || 0).toLocaleString()}<\/td>
                 <td>
                     <button class="action-btn edit-btn" onclick="editProduct(${product.id})"><i class="fas fa-edit"></i> Edit</button>
@@ -102,6 +98,11 @@ window.editProduct = async (id) => {
         const response = await fetch(`${API_URL}/api/products/${id}`);
         const product = await response.json();
         
+        if (!product) {
+            showToast('Produk tidak ditemukan!', true);
+            return;
+        }
+        
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> Edit Produk';
         document.getElementById('productId').value = product.id;
         document.getElementById('productName').value = product.name;
@@ -109,21 +110,23 @@ window.editProduct = async (id) => {
         document.getElementById('productPrice').value = product.price;
         document.getElementById('productDescription').value = product.description || '';
         
-        // Tampilkan preview gambar jika ada
-        if (product.image && product.image.startsWith('data:image')) {
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            const previewImg = document.getElementById('imagePreview');
-            if (previewContainer && previewImg) {
-                previewImg.src = product.image;
-                previewContainer.style.display = 'block';
-            }
+        // Reset file input
+        const imageInput = document.getElementById('productImage');
+        if (imageInput) imageInput.value = '';
+        
+        // Tampilkan preview gambar lama jika ada
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImg = document.getElementById('imagePreview');
+        
+        if (product.image && product.image !== 'https://via.placeholder.com/50') {
+            previewImg.src = product.image;
+            previewContainer.style.display = 'block';
         } else {
-            const previewContainer = document.getElementById('imagePreviewContainer');
-            if (previewContainer) previewContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
         }
         
-        document.getElementById('productImage').value = '';
         document.getElementById('productModal').style.display = 'flex';
+        
     } catch (error) {
         console.error('Error loading product:', error);
         showToast('Gagal memuat data produk: ' + error.message, true);
@@ -155,11 +158,13 @@ function closeProductModal() {
     const form = document.getElementById('productForm');
     const previewContainer = document.getElementById('imagePreviewContainer');
     const productId = document.getElementById('productId');
+    const productImage = document.getElementById('productImage');
     
     if (modal) modal.style.display = 'none';
     if (form) form.reset();
     if (previewContainer) previewContainer.style.display = 'none';
     if (productId) productId.value = '';
+    if (productImage) productImage.value = '';
 }
 
 // Add product button
@@ -173,37 +178,40 @@ if (addProductBtn) {
         const form = document.getElementById('productForm');
         const productId = document.getElementById('productId');
         const previewContainer = document.getElementById('imagePreviewContainer');
+        const productImage = document.getElementById('productImage');
         const nameInput = document.getElementById('productName');
         const categorySelect = document.getElementById('productCategory');
         const priceInput = document.getElementById('productPrice');
         const descriptionTextarea = document.getElementById('productDescription');
-        const imageInput = document.getElementById('productImage');
         
         if (form) form.reset();
         if (productId) productId.value = '';
         if (previewContainer) previewContainer.style.display = 'none';
+        if (productImage) productImage.value = '';
         if (nameInput) nameInput.value = '';
         if (categorySelect) categorySelect.value = 'kopi';
         if (priceInput) priceInput.value = '';
         if (descriptionTextarea) descriptionTextarea.value = '';
-        if (imageInput) imageInput.value = '';
         
         document.getElementById('productModal').style.display = 'flex';
     });
 }
 
-// Preview image
+// Preview image before upload
 const productImageInput = document.getElementById('productImage');
 if (productImageInput) {
     productImageInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (!file.type.match('image.*')) {
-                showToast('File harus berupa gambar!', true);
+            // Validasi tipe file
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                showToast('File harus berupa gambar (JPG, PNG, GIF, WEBP)!', true);
                 productImageInput.value = '';
                 return;
             }
             
+            // Validasi ukuran file (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
                 showToast('Ukuran gambar maksimal 5MB!', true);
                 productImageInput.value = '';
@@ -230,21 +238,46 @@ const productForm = document.getElementById('productForm');
 if (productForm) {
     productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        e.stopPropagation();
         
+        console.log('Form submitted');
+        
+        // Ambil nilai dari form
         const id = document.getElementById('productId').value;
-        const formData = new FormData();
-        formData.append('name', document.getElementById('productName').value);
-        formData.append('category', document.getElementById('productCategory').value);
-        formData.append('price', document.getElementById('productPrice').value);
-        formData.append('description', document.getElementById('productDescription').value);
-        
+        const name = document.getElementById('productName').value.trim();
+        const category = document.getElementById('productCategory').value;
+        const price = document.getElementById('productPrice').value;
+        const description = document.getElementById('productDescription').value;
         const imageFile = document.getElementById('productImage').files[0];
+        
+        console.log('Form data:', { id, name, category, price, description, hasImage: !!imageFile });
+        
+        // Validasi input
+        if (!name) {
+            showToast('Nama produk harus diisi!', true);
+            return;
+        }
+        
+        if (!price || price <= 0) {
+            showToast('Harga harus diisi dengan benar!', true);
+            return;
+        }
+        
+        // Buat FormData
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('category', category);
+        formData.append('price', price);
+        formData.append('description', description);
+        
         if (imageFile) {
             formData.append('image', imageFile);
         }
         
         const url = id ? `${API_URL}/api/products/${id}` : `${API_URL}/api/products`;
         const method = id ? 'PUT' : 'POST';
+        
+        console.log('Sending request to:', url, 'method:', method);
         
         try {
             const response = await fetch(url, {
@@ -253,11 +286,12 @@ if (productForm) {
             });
             
             const result = await response.json();
+            console.log('Response:', result);
             
             if (response.ok) {
                 showToast(id ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan');
                 closeProductModal();
-                loadProducts();
+                await loadProducts();
             } else {
                 showToast(result.error || 'Gagal menyimpan produk', true);
             }
@@ -267,6 +301,29 @@ if (productForm) {
         }
     });
 }
+
+// Submit button click handler
+const submitBtn = document.getElementById('submitProductBtn');
+if (submitBtn) {
+    submitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('Submit button clicked');
+        const form = document.getElementById('productForm');
+        if (form) {
+            // Trigger form submit
+            const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
+            form.dispatchEvent(submitEvent);
+        }
+    });
+}
+
+// Remove image preview function (global)
+window.removeImagePreview = function() {
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const imageInput = document.getElementById('productImage');
+    if (previewContainer) previewContainer.style.display = 'none';
+    if (imageInput) imageInput.value = '';
+};
 
 // ============ TABLE MANAGEMENT ============
 

@@ -131,16 +131,23 @@ app.get('/api/products/:id', (req, res) => {
     }
 });
 
-app.post('/api/products', upload.single('image'), (req, res) => {
+// POST product with image upload - UPDATED
+app.post('/api/products', upload.single('image'), async (req, res) => {
     try {
-        const db = readDB();
         const { name, category, price, description } = req.body;
+        
+        console.log('Received product data:', { name, category, price, description });
+        console.log('File:', req.file);
         
         if (!name) {
             return res.status(400).json({ error: 'Nama produk harus diisi!' });
         }
         
-        let imageUrl = req.file ? `/uploads/${req.file.filename}` : 'https://via.placeholder.com/300x200?text=Product';
+        if (!price || price <= 0) {
+            return res.status(400).json({ error: 'Harga tidak valid!' });
+        }
+        
+        let imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
         
         const newProduct = {
             id: Date.now(),
@@ -151,8 +158,11 @@ app.post('/api/products', upload.single('image'), (req, res) => {
             image: imageUrl
         };
         
+        const db = readDB();
         db.products.push(newProduct);
         writeDB(db);
+        
+        console.log('Product added:', newProduct);
         res.status(201).json({ success: true, product: newProduct });
     } catch (error) {
         console.error('Error adding product:', error);
@@ -160,17 +170,23 @@ app.post('/api/products', upload.single('image'), (req, res) => {
     }
 });
 
-app.put('/api/products/:id', upload.single('image'), (req, res) => {
+// PUT product with image upload - UPDATED
+app.put('/api/products/:id', upload.single('image'), async (req, res) => {
     try {
-        const db = readDB();
         const id = parseInt(req.params.id);
+        const { name, category, price, description } = req.body;
+        
+        console.log('Updating product ID:', id);
+        console.log('Received data:', { name, category, price, description });
+        console.log('File:', req.file);
+        
+        const db = readDB();
         const index = db.products.findIndex(p => p.id === id);
         
         if (index === -1) {
             return res.status(404).json({ error: 'Product not found' });
         }
         
-        const { name, category, price, description } = req.body;
         let imageUrl = req.file ? `/uploads/${req.file.filename}` : db.products[index].image;
         
         db.products[index] = {
@@ -183,6 +199,7 @@ app.put('/api/products/:id', upload.single('image'), (req, res) => {
         };
         
         writeDB(db);
+        console.log('Product updated:', db.products[index]);
         res.json({ success: true, product: db.products[index] });
     } catch (error) {
         console.error('Error updating product:', error);
