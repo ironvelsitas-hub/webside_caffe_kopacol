@@ -100,15 +100,15 @@ function writeDB(data) { database = data; saveDatabase(); }
 // Load database on start
 loadDatabase();
 
-// ============ ADMIN AUTH ============
+// ============ ADMIN AUTH - FIXED ============
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
-    console.log('Login attempt - Username:', username, 'Password:', password);
+    console.log('Login attempt - Username:', username);
     
     // Cek kredensial
     if (username === 'admin' && password === 'admin123') {
         const token = 'admin_token_' + Date.now();
-        console.log('Login success, token:', token);
+        console.log('Login success');
         res.json({ 
             success: true, 
             token: token,
@@ -122,6 +122,7 @@ app.post('/api/admin/login', (req, res) => {
         });
     }
 });
+
 // ============ PRODUCT ROUTES ============
 app.get('/api/products', (req, res) => {
     try {
@@ -143,7 +144,6 @@ app.get('/api/products/:id', (req, res) => {
     }
 });
 
-// POST product with image upload - UPDATED
 app.post('/api/products', upload.single('image'), async (req, res) => {
     try {
         const { name, category, price, description } = req.body;
@@ -182,15 +182,12 @@ app.post('/api/products', upload.single('image'), async (req, res) => {
     }
 });
 
-// PUT product with image upload - UPDATED
 app.put('/api/products/:id', upload.single('image'), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         const { name, category, price, description } = req.body;
         
         console.log('Updating product ID:', id);
-        console.log('Received data:', { name, category, price, description });
-        console.log('File:', req.file);
         
         const db = readDB();
         const index = db.products.findIndex(p => p.id === id);
