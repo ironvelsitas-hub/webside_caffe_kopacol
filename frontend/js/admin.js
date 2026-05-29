@@ -2,12 +2,16 @@
 const API_URL = window.location.origin || 'http://localhost:3000';
 let adminToken = null;
 
+// API Configuration
+const API_URL = window.location.origin || 'http://localhost:3000';
+let adminToken = null;
+
 // Login function - FIXED
 async function login() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    console.log('Attempting login with:', username);
+    console.log('Login clicked with username:', username);
     
     try {
         const response = await fetch(`${API_URL}/api/admin/login`, {
@@ -20,10 +24,12 @@ async function login() {
         
         console.log('Response status:', response.status);
         
+        // Baca response sebagai JSON
         const data = await response.json();
         console.log('Response data:', data);
         
-        if (response.ok && data.success) {
+        // Cek apakah login berhasil - PERHATIKAN: data.success adalah boolean
+        if (data.success === true) {
             adminToken = data.token;
             localStorage.setItem('adminToken', adminToken);
             localStorage.setItem('adminUsername', username);
@@ -35,13 +41,12 @@ async function login() {
             if (loginModal) loginModal.style.display = 'none';
             if (adminPanel) adminPanel.style.display = 'block';
             
-            if (document.getElementById('adminUsername')) {
-                document.getElementById('adminUsername').textContent = username;
-            }
+            const adminUsernameSpan = document.getElementById('adminUsername');
+            if (adminUsernameSpan) adminUsernameSpan.textContent = username;
             
             showToast('Login berhasil! Selamat datang Admin');
             
-            // Load data setelah login
+            // Load semua data setelah login
             await loadProducts();
             await loadOrders();
             await loadTables();
@@ -54,7 +59,6 @@ async function login() {
         showToast('Error: ' + error.message, true);
     }
 }
-
 // Logout
 function logout() {
     localStorage.removeItem('adminToken');
