@@ -54,6 +54,7 @@ async function login() {
         showToast('Error: ' + error.message, true);
     }
 }
+
 // Logout
 function logout() {
     localStorage.removeItem('adminToken');
@@ -71,7 +72,7 @@ async function loadProducts() {
     const tbody = document.getElementById('productsTableBody');
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...<\/td><\/tr>';
+    tbody.innerHTML = '<table><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat produk...<\/td><\/tr>';
     
     try {
         const response = await fetch(`${API_URL}/api/products`);
@@ -248,7 +249,7 @@ if (productImageInput) {
     });
 }
 
-// ============ SAVE PRODUCT - UPDATED WITH FORM DATA ============
+// ============ SAVE PRODUCT ============
 // Save product (add/edit) - dengan upload file
 const productForm = document.getElementById('productForm');
 if (productForm) {
@@ -326,7 +327,6 @@ if (submitBtn) {
         console.log('Submit button clicked');
         const form = document.getElementById('productForm');
         if (form) {
-            // Trigger form submit
             const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
             form.dispatchEvent(submitEvent);
         }
