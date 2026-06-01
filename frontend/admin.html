@@ -433,10 +433,7 @@
     </div>
 </div>
 
-<!-- Admin Panel - Pastikan id nya benar -->
-<div id="adminPanel" style="display: none;">
-    ... konten admin ...
-</div>
+
     <!-- Main Admin Panel -->
     <div id="adminPanel" style="display: none;">
         <div class="admin-container">
@@ -601,14 +598,7 @@
     </div>
 </div>
 
-<script>
-// Fungsi untuk menghapus preview gambar
-function removeImagePreview() {
-    const previewContainer = document.getElementById('imagePreviewContainer');
-    const imageInput = document.getElementById('productImage');
-    if (previewContainer) previewContainer.style.display = 'none';
-    if (imageInput) imageInput.value = '';
-}
-</script>
+<div id="toast" class="toast"></div>
+<script src="js/admin.js"></script>
 </body>
 </html>
