@@ -100,16 +100,26 @@ function writeDB(data) { database = data; saveDatabase(); }
 // Load database on start
 loadDatabase();
 
-// ============ ADMIN AUTH ============
+// ============ ADMIN AUTH - FIXED ============
 app.post('/api/admin/login', (req, res) => {
     const { username, password } = req.body;
+    console.log('Admin login attempt:', { username, password });
+    
     if (username === 'admin' && password === 'admin123') {
-        res.json({ success: true, token: 'admin_token_' + Date.now() });
+        console.log('Login SUCCESS');
+        res.json({ 
+            success: true, 
+            token: 'admin_token_' + Date.now(),
+            message: 'Login successful'
+        });
     } else {
-        res.status(401).json({ success: false, error: 'Login gagal!' });
+        console.log('Login FAILED - wrong credentials');
+        res.status(401).json({ 
+            success: false, 
+            error: 'Username atau password salah!' 
+        });
     }
 });
-
 // ============ PRODUCT ROUTES ============
 app.get('/api/products', (req, res) => {
     try {
@@ -342,7 +352,7 @@ app.listen(PORT, () => {
     console.log(`========================================`);
     console.log(`📱 Frontend: http://localhost:${PORT}`);
     console.log(`📡 API: http://localhost:${PORT}/api/products`);
-    console.log(`💾 Database: ${DB_PATH}`);
+    console.log(`🔐 Admin Login: admin / admin123`);
     console.log(`========================================\n`);
 });
 
