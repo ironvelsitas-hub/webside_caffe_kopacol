@@ -1,6 +1,4 @@
-- [x] Plan disetujui dan perubahan mulai
-- [x] Ubah backend/server.js dari MySQL ke database yang cocok untuk Vercel (file-based storage)
-- [x] Update backend/package.json dependencies
-- [x] Pastikan endpoint /api/products tidak lagi 500
-- [x] Tes dengan menjalankan server dan hit endpoint produk (status 200, 4 products)
+- [x] Analyze repo files related to admin product add/update and API base URL
+- [x] Fix API_URL detection in frontend/js/admin.js so localhost/admin calls backend on http://localhost:3000
+- [x] Add guard around response parsing in frontend/js/admin.js to avoid crash when server returns HTML instead of JSON
 

@@ -1,6 +1,14 @@
 // API Configuration
-const API_URL = window.location.origin || 'http://localhost:3000';
+let API_URL;
+
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    API_URL = 'http://localhost:3000';
+} else {
+    API_URL = window.location.origin;
+}
+
 let adminToken = null;
+
 
 // Login function - FIXED
 async function login() {
@@ -183,19 +191,33 @@ if (productForm) {
         
         try {
             const response = await fetch(url, { 
-                method: method, 
+                method: method,
                 body: formData 
             });
-            
-            const result = await response.json();
-            
+
+            let result = null;
+            try {
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    result = await response.json();
+                } else {
+                    const text = await response.text();
+                    result = { error: text };
+                }
+            } catch (e) {
+                // Fallback agar tidak crash saat response bukan JSON
+                const text = await response.text().catch(() => '');
+                result = { error: text || 'Response bukan JSON' };
+            }
+
             if (response.ok) {
                 showToast(id ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan');
                 closeProductModal();
                 loadProducts();
             } else {
-                showToast(result.error || 'Gagal menyimpan produk', true);
+                showToast(result?.error || 'Gagal menyimpan produk', true);
             }
+
         } catch (error) {
             console.error('Error saving product:', error);
             showToast('Error: ' + error.message, true);
