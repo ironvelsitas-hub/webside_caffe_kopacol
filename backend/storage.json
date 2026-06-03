@@ -1,0 +1,54 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Espresso",
+      "category": "kopi",
+      "price": 25000,
+      "description": "Kopi hitam pekat dengan crema",
+      "image": "https://via.placeholder.com/300x200?text=Espresso",
+      "created_at": null
+    },
+    {
+      "id": 2,
+      "name": "Cappuccino",
+      "category": "kopi",
+      "price": 32000,
+      "description": "Espresso dengan busa susu",
+      "image": "https://via.placeholder.com/300x200?text=Cappuccino",
+      "created_at": null
+    },
+    {
+      "id": 3,
+      "name": "French Fries",
+      "category": "snack",
+      "price": 18000,
+      "description": "Kentang goreng renyah",
+      "image": "https://via.placeholder.com/300x200?text=French+Fries",
+      "created_at": null
+    },
+    {
+      "id": 4,
+      "name": "Nasi Goreng",
+      "category": "makanan",
+      "price": 35000,
+      "description": "Nasi goreng spesial",
+      "image": "https://via.placeholder.com/300x200?text=Nasi+Goreng",
+      "created_at": null
+    }
+  ],
+  "orders": [],
+  "tables": [
+    { "id": 1, "number": 1, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 2, "number": 2, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 3, "number": 3, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 4, "number": 4, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 5, "number": 5, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 6, "number": 6, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 7, "number": 7, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 8, "number": 8, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 9, "number": 9, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null },
+    { "id": 10, "number": 10, "status": "available", "is_active": true, "qr_code": null, "qr_code_url": null, "created_at": null }
+  ]
+}
+

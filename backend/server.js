@@ -3,16 +3,17 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const mysql = require('mysql2');
+
+const { readStorage, writeStorage, nextId } = require('./dataStore');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CORS configuration
 app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.options('*', cors());
 
@@ -22,406 +23,361 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ============ MULTER CONFIGURATION ============
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = './uploads';
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
+  destination: (req, file, cb) => {
+    const uploadDir = './uploads';
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
 });
 
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-        return cb(null, true);
-    } else {
-        cb(new Error('Hanya gambar yang diperbolehkan!'));
-    }
+  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (mimetype && extname) return cb(null, true);
+  cb(new Error('Hanya gambar yang diperbolehkan!'));
 };
 
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: fileFilter
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter
 });
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ============ MYSQL CONNECTION ============
-const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'cafe_ironcolol',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-const promisePool = pool.promise();
-
-// ============ INITIALIZE DATABASE ============
-async function initDatabase() {
-    try {
-        // Create database if not exists
-        await promisePool.execute('CREATE DATABASE IF NOT EXISTS cafe_ironcolol');
-        await promisePool.execute('USE cafe_ironcolol');
-        
-        // Create products table
-        await promisePool.execute(`
-            CREATE TABLE IF NOT EXISTS products (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                name VARCHAR(255) NOT NULL,
-                category VARCHAR(100) DEFAULT 'snack',
-                price INT NOT NULL,
-                description TEXT,
-                image VARCHAR(500),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        // Create orders table
-        await promisePool.execute(`
-            CREATE TABLE IF NOT EXISTS orders (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                items JSON,
-                total INT DEFAULT 0,
-                status VARCHAR(50) DEFAULT 'pending',
-                customer_name VARCHAR(255),
-                customer_phone VARCHAR(50),
-                customer_address TEXT,
-                table_number VARCHAR(50),
-                note TEXT,
-                payment_method VARCHAR(50),
-                payment_status VARCHAR(50) DEFAULT 'pending',
-                type VARCHAR(50) DEFAULT 'dine_in',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        // Create tables table
-        await promisePool.execute(`
-            CREATE TABLE IF NOT EXISTS cafe_tables (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                number INT UNIQUE NOT NULL,
-                status VARCHAR(50) DEFAULT 'available',
-                is_active BOOLEAN DEFAULT TRUE,
-                qr_code TEXT,
-                qr_code_url TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        console.log('✅ MySQL tables ready');
-        
-        // Insert initial tables if empty
-        const [tables] = await promisePool.execute('SELECT COUNT(*) as count FROM cafe_tables');
-        if (tables[0].count === 0) {
-            for (let i = 1; i <= 10; i++) {
-                await promisePool.execute(
-                    'INSERT INTO cafe_tables (number, status) VALUES (?, ?)',
-                    [i, 'available']
-                );
-            }
-            console.log('✅ Initial tables seeded (1-10)');
-        }
-        
-        // Insert initial products if empty
-        const [products] = await promisePool.execute('SELECT COUNT(*) as count FROM products');
-        if (products[0].count === 0) {
-            const initialProducts = [
-                ['Espresso', 'kopi', 25000, 'Kopi hitam pekat dengan crema', 'https://via.placeholder.com/300x200?text=Espresso'],
-                ['Cappuccino', 'kopi', 32000, 'Espresso dengan busa susu', 'https://via.placeholder.com/300x200?text=Cappuccino'],
-                ['French Fries', 'snack', 18000, 'Kentang goreng renyah', 'https://via.placeholder.com/300x200?text=French+Fries'],
-                ['Nasi Goreng', 'makanan', 35000, 'Nasi goreng spesial', 'https://via.placeholder.com/300x200?text=Nasi+Goreng']
-            ];
-            for (const product of initialProducts) {
-                await promisePool.execute(
-                    'INSERT INTO products (name, category, price, description, image) VALUES (?, ?, ?, ?, ?)',
-                    product
-                );
-            }
-            console.log('✅ Initial products seeded');
-        }
-        
-    } catch (error) {
-        console.error('❌ Database init error:', error);
-    }
+function getApiUrl(req) {
+  return `${req.protocol}://${req.get('host')}`;
 }
 
-// ============ ADMIN AUTH - FIXED ============
+// ============ ADMIN AUTH ============
 app.post('/api/admin/login', (req, res) => {
-    const { username, password } = req.body;
-    console.log('Admin login attempt:', { username, password });
-    
-    if (username === 'admin' && password === 'admin123') {
-        console.log('Login SUCCESS');
-        res.json({ 
-            success: true, 
-            token: 'admin_token_' + Date.now(),
-            message: 'Login successful'
-        });
-    } else {
-        console.log('Login FAILED - wrong credentials');
-        res.status(401).json({ 
-            success: false, 
-            error: 'Username atau password salah!' 
-        });
-    }
+  const { username, password } = req.body;
+  console.log('Admin login attempt:', { username, password });
+
+  if (username === 'admin' && password === 'admin123') {
+    return res.json({
+      success: true,
+      token: 'admin_token_' + Date.now(),
+      message: 'Login successful'
+    });
+  }
+
+  return res.status(401).json({
+    success: false,
+    error: 'Username atau password salah!'
+  });
 });
+
 // ============ PRODUCT ROUTES ============
-// Get all products
 app.get('/api/products', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM products ORDER BY created_at DESC');
-        res.json(rows);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Failed to fetch products' });
-    }
+  try {
+    const data = readStorage();
+    const products = [...(data.products || [])].sort((a, b) => (b.id || 0) - (a.id || 0));
+    res.json(products);
+  } catch (e) {
+    console.error('Error fetching products:', e);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
 });
 
-// Get single product
 app.get('/api/products/:id', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
-        if (rows.length > 0) {
-            res.json(rows[0]);
-        } else {
-            res.status(404).json({ error: 'Product not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Invalid ID' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const product = (data.products || []).find(p => p.id === id);
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    res.json(product);
+  } catch (e) {
+    res.status(500).json({ error: 'Invalid ID' });
+  }
 });
 
-// Create product with image upload
 app.post('/api/products', upload.single('image'), async (req, res) => {
-    try {
-        const { name, category, price, description } = req.body;
-        
-        if (!name) {
-            return res.status(400).json({ error: 'Nama produk harus diisi!' });
-        }
-        
-        if (!price || price <= 0) {
-            return res.status(400).json({ error: 'Harga tidak valid!' });
-        }
-        
-        let imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-        
-        const [result] = await promisePool.execute(
-            'INSERT INTO products (name, category, price, description, image) VALUES (?, ?, ?, ?, ?)',
-            [name, category || 'snack', parseInt(price), description || '', imageUrl]
-        );
-        
-        const [newProduct] = await promisePool.execute('SELECT * FROM products WHERE id = ?', [result.insertId]);
-        
-        console.log('Product added to MySQL:', newProduct[0]);
-        res.status(201).json({ success: true, product: newProduct[0] });
-    } catch (error) {
-        console.error('Error adding product:', error);
-        res.status(500).json({ error: 'Failed to add product' });
-    }
+  try {
+    const { name, category, price, description } = req.body;
+
+    if (!name) return res.status(400).json({ error: 'Nama produk harus diisi!' });
+    if (!price || Number(price) <= 0) return res.status(400).json({ error: 'Harga tidak valid!' });
+
+    const data = readStorage();
+    const newProduct = {
+      id: nextId(data.products || []),
+      name,
+      category: category || 'snack',
+      price: Number(price),
+      description: description || '',
+      image: req.file ? `/uploads/${req.file.filename}` : null,
+      created_at: new Date().toISOString()
+    };
+
+    data.products.push(newProduct);
+    writeStorage(data);
+
+    return res.status(201).json({ success: true, product: newProduct });
+  } catch (e) {
+    console.error('Error adding product:', e);
+    res.status(500).json({ error: 'Failed to add product' });
+  }
 });
 
-// Update product
 app.put('/api/products/:id', upload.single('image'), async (req, res) => {
-    try {
-        const { name, category, price, description } = req.body;
-        
-        if (!name) {
-            return res.status(400).json({ error: 'Nama produk harus diisi!' });
-        }
-        
-        let imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-        
-        if (imageUrl) {
-            await promisePool.execute(
-                'UPDATE products SET name=?, category=?, price=?, description=?, image=? WHERE id=?',
-                [name, category, parseInt(price), description, imageUrl, req.params.id]
-            );
-        } else {
-            await promisePool.execute(
-                'UPDATE products SET name=?, category=?, price=?, description=? WHERE id=?',
-                [name, category, parseInt(price), description, req.params.id]
-            );
-        }
-        
-        const [updatedProduct] = await promisePool.execute('SELECT * FROM products WHERE id = ?', [req.params.id]);
-        console.log('Product updated:', updatedProduct[0]);
-        res.json({ success: true, product: updatedProduct[0] });
-    } catch (error) {
-        console.error('Error updating product:', error);
-        res.status(500).json({ error: 'Update failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const { name, category, price, description } = req.body;
+
+    if (!name) return res.status(400).json({ error: 'Nama produk harus diisi!' });
+
+    const data = readStorage();
+    const idx = (data.products || []).findIndex(p => p.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Product not found' });
+
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const updated = {
+      ...data.products[idx],
+      name,
+      category: category || 'snack',
+      price: Number(price),
+      description: description || '',
+      image: imageUrl !== null ? imageUrl : data.products[idx].image
+    };
+
+    data.products[idx] = updated;
+    writeStorage(data);
+
+    return res.json({ success: true, product: updated });
+  } catch (e) {
+    console.error('Error updating product:', e);
+    res.status(500).json({ error: 'Update failed' });
+  }
 });
 
-// Delete product
 app.delete('/api/products/:id', async (req, res) => {
-    try {
-        await promisePool.execute('DELETE FROM products WHERE id = ?', [req.params.id]);
-        console.log('Product deleted ID:', req.params.id);
-        res.json({ message: 'Product deleted' });
-    } catch (error) {
-        res.status(500).json({ error: 'Delete failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const before = (data.products || []).length;
+    data.products = (data.products || []).filter(p => p.id !== id);
+
+    if ((data.products || []).length === before) return res.status(404).json({ error: 'Product not found' });
+
+    writeStorage(data);
+    return res.json({ message: 'Product deleted' });
+  } catch (e) {
+    res.status(500).json({ error: 'Delete failed' });
+  }
 });
 
 // ============ ORDER ROUTES ============
 app.post('/api/orders', async (req, res) => {
-    try {
-        const { items, total, customerName, customerPhone, customerAddress, tableNumber, note, paymentMethod, paymentStatus, type } = req.body;
-        const [result] = await promisePool.execute(
-            `INSERT INTO orders (items, total, customer_name, customer_phone, customer_address, table_number, note, payment_method, payment_status, type) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [JSON.stringify(items), total, customerName, customerPhone, customerAddress, tableNumber, note, paymentMethod, paymentStatus || 'pending', type || 'dine_in']
-        );
-        res.json({ success: true, id: result.insertId });
-    } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ error: 'Failed to create order' });
-    }
+  try {
+    const { items, total, customerName, customerPhone, customerAddress, tableNumber, note, paymentMethod, paymentStatus, type } = req.body;
+
+    const data = readStorage();
+    const order = {
+      id: nextId(data.orders || []),
+      items: Array.isArray(items) ? items : [],
+      total: Number(total) || 0,
+      status: 'pending',
+      customer_name: customerName || null,
+      customer_phone: customerPhone || null,
+      customer_address: customerAddress || null,
+      table_number: tableNumber || null,
+      note: note || null,
+      payment_method: paymentMethod || null,
+      payment_status: paymentStatus || 'pending',
+      type: type || 'dine_in',
+      created_at: new Date().toISOString()
+    };
+
+    data.orders.push(order);
+    writeStorage(data);
+
+    return res.json({ success: true, id: order.id });
+  } catch (e) {
+    console.error('Error creating order:', e);
+    return res.status(500).json({ error: 'Failed to create order' });
+  }
 });
 
 app.get('/api/orders', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM orders ORDER BY created_at DESC');
-        const orders = rows.map(order => ({ ...order, items: JSON.parse(order.items || '[]') }));
-        res.json(orders);
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).json({ error: 'Failed to fetch orders' });
-    }
+  try {
+    const data = readStorage();
+    const orders = [...(data.orders || [])].sort((a, b) => (b.id || 0) - (a.id || 0));
+    res.json(orders);
+  } catch (e) {
+    console.error('Error fetching orders:', e);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
 });
 
 app.put('/api/orders/:id', async (req, res) => {
-    try {
-        await promisePool.execute('UPDATE orders SET status = ? WHERE id = ?', [req.body.status, req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const idx = (data.orders || []).findIndex(o => o.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Order not found' });
+
+    data.orders[idx].status = req.body.status;
+    writeStorage(data);
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Update failed' });
+  }
 });
 
 app.put('/api/orders/:id/confirm-payment', async (req, res) => {
-    try {
-        await promisePool.execute('UPDATE orders SET payment_status = ? WHERE id = ?', ['paid', req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const idx = (data.orders || []).findIndex(o => o.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Order not found' });
+
+    data.orders[idx].payment_status = 'paid';
+    writeStorage(data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Update failed' });
+  }
 });
 
 // ============ TABLE ROUTES ============
 app.get('/api/tables', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM cafe_tables ORDER BY number ASC');
-        res.json(rows);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch tables' });
-    }
+  try {
+    const data = readStorage();
+    const tables = [...(data.tables || [])].sort((a, b) => (a.number || 0) - (b.number || 0));
+
+    res.json(tables.map(t => ({
+      id: t.id,
+      number: t.number,
+      status: t.status,
+      isActive: t.is_active,
+      qrCode: t.qr_code,
+      qrCodeUrl: t.qr_code_url,
+      createdAt: t.created_at
+    })));
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch tables' });
+  }
 });
 
 app.post('/api/admin/tables', async (req, res) => {
-    try {
-        const { number, status } = req.body;
-        
-        if (!number) {
-            return res.status(400).json({ error: 'Nomor meja harus diisi!' });
-        }
-        
-        const [existing] = await promisePool.execute('SELECT * FROM cafe_tables WHERE number = ?', [number]);
-        if (existing.length > 0) {
-            return res.status(400).json({ error: 'Nomor meja sudah ada!' });
-        }
-        
-        const [result] = await promisePool.execute(
-            'INSERT INTO cafe_tables (number, status) VALUES (?, ?)',
-            [number, status || 'available']
-        );
-        res.status(201).json({ success: true, id: result.insertId });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to add table' });
-    }
+  try {
+    const { number, status } = req.body;
+    if (!number) return res.status(400).json({ error: 'Nomor meja harus diisi!' });
+
+    const data = readStorage();
+    const exists = (data.tables || []).some(t => String(t.number) === String(number));
+    if (exists) return res.status(400).json({ error: 'Nomor meja sudah ada!' });
+
+    const table = {
+      id: nextId(data.tables || []),
+      number: Number(number),
+      status: status || 'available',
+      is_active: true,
+      qr_code: null,
+      qr_code_url: null,
+      created_at: new Date().toISOString()
+    };
+
+    data.tables.push(table);
+    writeStorage(data);
+
+    res.status(201).json({ success: true, id: table.id });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to add table' });
+  }
 });
 
 app.put('/api/admin/tables/:id', async (req, res) => {
-    try {
-        await promisePool.execute('UPDATE cafe_tables SET status = ? WHERE id = ?', [req.body.status, req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const idx = (data.tables || []).findIndex(t => t.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Table not found' });
+
+    data.tables[idx].status = req.body.status;
+    writeStorage(data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Update failed' });
+  }
 });
 
 app.put('/api/admin/tables/:id/qr', async (req, res) => {
-    try {
-        await promisePool.execute('UPDATE cafe_tables SET qr_code = ?, qr_code_url = ? WHERE id = ?', 
-            [req.body.qrCode, req.body.qrCodeUrl, req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Update failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const idx = (data.tables || []).findIndex(t => t.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Table not found' });
+
+    data.tables[idx].qr_code = req.body.qrCode;
+    data.tables[idx].qr_code_url = req.body.qrCodeUrl;
+    writeStorage(data);
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Update failed' });
+  }
 });
 
 app.delete('/api/admin/tables/:id', async (req, res) => {
-    try {
-        await promisePool.execute('DELETE FROM cafe_tables WHERE id = ?', [req.params.id]);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ error: 'Delete failed' });
-    }
+  try {
+    const id = Number(req.params.id);
+    const data = readStorage();
+    const before = (data.tables || []).length;
+    data.tables = (data.tables || []).filter(t => t.id !== id);
+
+    if ((data.tables || []).length === before) return res.status(404).json({ error: 'Table not found' });
+
+    writeStorage(data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Delete failed' });
+  }
 });
 
 // ============ USER AUTH ============
 app.post('/api/user/login', (req, res) => {
-    const { phone } = req.body;
-    if (!phone || phone.length < 10) {
-        return res.status(400).json({ success: false, error: 'Nomor telepon tidak valid!' });
-    }
-    res.json({ success: true, token: 'user_token_' + Date.now(), phone: phone });
+  const { phone } = req.body;
+  if (!phone || phone.length < 10) {
+    return res.status(400).json({ success: false, error: 'Nomor telepon tidak valid!' });
+  }
+  res.json({ success: true, token: 'user_token_' + Date.now(), phone: phone });
 });
 
 app.get('/api/user/orders/:phone', async (req, res) => {
-    try {
-        const [rows] = await promisePool.execute('SELECT * FROM orders WHERE customer_phone = ? ORDER BY created_at DESC', [req.params.phone]);
-        const orders = rows.map(order => ({ ...order, items: JSON.parse(order.items || '[]') }));
-        res.json(orders);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch orders' });
-    }
+  try {
+    const data = readStorage();
+    const orders = (data.orders || [])
+      .filter(o => String(o.customer_phone || '') === String(req.params.phone))
+      .sort((a, b) => (b.id || 0) - (a.id || 0));
+    res.json(orders);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
 });
 
 // ============ SERVE FRONTEND ============
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) {
-        return res.status(404).json({ error: 'API not found' });
-    }
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'API not found' });
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// ============ START SERVER ============
-app.listen(PORT, () => {
-    console.log(`\n========================================`);
-    console.log(`🚀 Cafe IronColol Server Running!`);
-    console.log(`========================================`);
-    console.log(`📱 Frontend: http://localhost:${PORT}`);
-    console.log(`📡 API: http://localhost:${PORT}/api/products`);
-    console.log(`🔐 Admin Login: admin / admin123`);
-    console.log(`🛢️  MySQL: Connected`);
-        console.log(`📊 phpMyAdmin: http://localhost/phpmyadmin`);
-    console.log(`========================================\n`);
-});
+// Vercel: do not rely on app.listen.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server listening on :${PORT}`);
+  });
+}
 
 module.exports = app;
+
