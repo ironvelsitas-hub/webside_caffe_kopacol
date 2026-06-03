@@ -51,7 +51,41 @@ const upload = multer({
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ============ MULTER/ERROR HANDLING (to debug 500) ============
+function safeErrorMessage(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  return err.message || 'Unknown error';
+}
+
+// Multer / upload error handler
+app.use((err, req, res, next) => {
+  // multer will throw these errors into next(err)
+  if (err) {
+    const status = err.statusCode || err.status || 500;
+    const payload = {
+      error: safeErrorMessage(err),
+      code: err.code || undefined,
+      field: err.field || undefined,
+      name: err.name || undefined
+    };
+
+    // Log request context for debugging
+    console.error('Upload/Server error:', {
+      method: req.method,
+      path: req.path,
+      contentType: req.headers['content-type'],
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      fileField: err.field
+    });
+
+    return res.status(status).json(payload);
+  }
+  next();
+});
+
 function getApiUrl(req) {
+
   return `${req.protocol}://${req.get('host')}`;
 }
 
