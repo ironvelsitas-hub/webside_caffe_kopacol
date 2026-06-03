@@ -223,29 +223,21 @@ document.getElementById('confirmPaymentDetailBtn')?.addEventListener('click', as
         return;
     }
     
-    // Handle payment proof
-    let paymentProof = null;
-    const proofInput = document.getElementById('paymentProof');
-    if (proofInput && proofInput.files && proofInput.files[0]) {
-        const file = proofInput.files[0];
-        paymentProof = await convertToBase64(file);
-    }
-    
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
+    // Backend file-storage hanya menyimpan field sesuai schema (items,total,customer_name,customer_phone,customer_address,table_number,note,payment_method,payment_status,type)
+    // paymentProof tidak wajib dikirim (disimpan hanya untuk kebutuhan UI/admin jika diperlukan)
     const orderData = {
         items: cart,
         total: total,
-        customerName: customer.name,
-        customerPhone: userPhone,
-        customerAddress: customer.address,
+        customer_name: customer.name,
+        customer_phone: userPhone,
+        customer_address: customer.address,
         note: customer.note || '',
-        paymentMethod: method === 'cod' ? 'COD (Bayar di Tempat)' : (method === 'qris' ? 'QRIS' : 'Transfer Bank'),
-        paymentStatus: method === 'cod' ? 'pending_cod' : 'waiting_confirmation',
-        paymentProof: paymentProof,
-        status: 'pending',
-        type: 'delivery',
-        createdAt: new Date().toISOString()
+        table_number: null,
+        payment_method: method === 'cod' ? 'COD (Bayar di Tempat)' : (method === 'qris' ? 'QRIS' : 'Transfer Bank'),
+        payment_status: method === 'cod' ? 'pending_cod' : 'waiting_confirmation',
+        type: 'delivery'
     };
     
     try {

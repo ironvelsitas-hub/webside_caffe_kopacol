@@ -175,31 +175,37 @@ document.getElementById('confirmPaymentBtn')?.addEventListener('click', async ()
     const userAddress = localStorage.getItem('userAddress') || '';
     
     // Create order data
+    // Backend file-storage hanya menyimpan field sesuai schema (items,total,customer_name,customer_phone,customer_address,table_number,note,payment_method,payment_status,type)
     const orderData = {
         items: cart,
         total: calculateTotal(cart),
-        status: 'pending',
-        paymentMethod: selectedPaymentMethod,
-        paymentStatus: 'waiting_confirmation',
-        tableNumber: orderType === 'dine_in' ? tableNumber : null,
-        customerName: orderType === 'delivery' ? (localStorage.getItem('userName') || customerName) : customerName,
-        customerPhone: orderType === 'delivery' ? userPhone : null,
-        customerAddress: orderType === 'delivery' ? (localStorage.getItem('customerAddress') || userAddress) : null,
-        type: orderType,
-        createdAt: new Date().toISOString(),
-        paymentProof: paymentProof.name
+        customer_name: orderType === 'delivery' ? (localStorage.getItem('userName') || customerName) : customerName,
+        customer_phone: orderType === 'delivery' ? userPhone : null,
+        customer_address: orderType === 'delivery' ? (localStorage.getItem('customerAddress') || userAddress) : null,
+        table_number: orderType === 'dine_in' ? tableNumber : null,
+        note: '',
+        payment_method:
+            selectedPaymentMethod === 'qris' ? 'QRIS' :
+            selectedPaymentMethod === 'bca' ? 'Transfer BCA' :
+            selectedPaymentMethod === 'bri' ? 'Transfer BRI' :
+            selectedPaymentMethod === 'dana' ? 'DANA' :
+            selectedPaymentMethod === 'ovo' ? 'OVO' : selectedPaymentMethod,
+        payment_status: 'waiting_confirmation',
+        type: orderType
     };
     
     try {
         // Simpan bukti pembayaran ke localStorage (simulasi)
         const reader = new FileReader();
-        reader.onload = async function(e) {
-            // Save payment proof to localStorage
+    reader.onload = async function(e) {
+            // Save payment proof to localStorage (optional)
             const paymentData = {
                 proof: e.target.result,
                 fileName: paymentProof.name,
                 uploadTime: new Date().toISOString()
             };
+            // backend file-storage tidak memerlukan paymentProof
+            try { localStorage.setItem('lastPaymentProof', JSON.stringify(paymentData)); } catch (_) {}
             localStorage.setItem('lastPaymentProof', JSON.stringify(paymentData));
             
             // Send order to backend
