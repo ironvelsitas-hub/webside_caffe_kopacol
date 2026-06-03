@@ -413,5 +413,30 @@ if (require.main === module) {
   });
 }
 
+// ============ ADMIN RESET (clear products/orders/tables) ============
+// NOTE: guarded with a simple secret to avoid accidental public resets.
+app.post('/api/admin/reset', (req, res) => {
+  try {
+    const { secret } = req.body || {};
+    const ADMIN_RESET_SECRET = process.env.ADMIN_RESET_SECRET || 'reset_admin_123';
+
+    if (secret !== ADMIN_RESET_SECRET) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
+    }
+
+    const data = readStorage();
+    data.products = [];
+    data.orders = [];
+    data.tables = [];
+    writeStorage(data);
+
+    return res.json({ success: true, message: 'Admin data reset complete' });
+  } catch (e) {
+    console.error('Admin reset error:', e);
+    return res.status(500).json({ success: false, error: 'Reset failed' });
+  }
+});
+
 module.exports = app;
+
 

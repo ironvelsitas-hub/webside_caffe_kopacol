@@ -76,9 +76,10 @@ async function loadProducts() {
         const products = await response.json();
         
         if (!products || products.length === 0) {
-            tbody.innerHTML = '<td><td colspan="5" class="text-center">Belum ada produk<\/td><\/tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada produk<\/td><\/tr>';
             return;
         }
+
         
         tbody.innerHTML = products.map(product => `
             <tr>

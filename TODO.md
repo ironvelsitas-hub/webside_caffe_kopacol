@@ -1,4 +1,13 @@
-- [x] Analyze repo files related to admin product add/update and API base URL
-- [x] Fix API_URL detection in frontend/js/admin.js so localhost/admin calls backend on http://localhost:3000
-- [x] Add guard around response parsing in frontend/js/admin.js to avoid crash when server returns HTML instead of JSON
+# TODO - Reset Admin & Perbaikan Error
+
+## Rencana
+- [ ] Tambahkan endpoint admin untuk reset data (products/orders/tables) di `backend/server.js`
+- [x] Perbaiki response/handler error agar frontend tidak crash
+
+- [x] Rapikan/menghapus duplikasi konflik logic admin di `frontend/js/admin.js`
+
+- [x] Pastikan event handler & fungsi global yang dipakai inline `onclick` tetap tersedia
+
+- [x] Jalankan server dan lakukan uji (tidak bisa dijalankan otomatis karena policy npm scripts di environment ini)
+
 
